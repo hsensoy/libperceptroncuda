@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <CUnit/Basic.h>
 #include "epblas/epblas.h"
 
 /*
@@ -29,21 +28,26 @@ void testDotProduct() {
     newInitializedGPUVector(&b, "vector B", 1000, matrixInitFixed, &one, NULL);
 
     dot(a, b, &result);
-    CU_ASSERT_EQUAL(1000, result);
+    check(1000 == result, "Result error %f in BLAS L1", result);
 
-    newInitializedCPUVector(&a, "vector A", 1000, matrixInitFixed, &one, NULL);
-    newInitializedCPUVector(&b, "vector B", 1000, matrixInitFixed, &two, NULL);
+    newInitializedGPUVector(&a, "vector A", 1000, matrixInitFixed, &one, NULL);
+    newInitializedGPUVector(&b, "vector B", 1000, matrixInitFixed, &two, NULL);
 
     dot(a, b, &result);
 
-    CU_ASSERT_EQUAL(2000, result);
+    check(2000 == result, "Result error %f in BLAS L1", result);
 
-    newInitializedCPUVector(&a, "vector A", 1000, matrixInitFixed, &three, NULL);
-    newInitializedCPUVector(&b, "vector B", 1000, matrixInitFixed, &three, NULL);
+    newInitializedGPUVector(&a, "vector A", 1000, matrixInitFixed, &three, NULL);
+    newInitializedGPUVector(&b, "vector B", 1000, matrixInitFixed, &three, NULL);
 
     EPARSE_CHECK_RETURN(dot(a, b, &result))
+    
+    check(9000 == result, "Result error %f in BLAS L1", result);
 
-    CU_ASSERT_EQUAL(9000, result);
+	exit(EXIT_SUCCESS);
+error:
+	exit(EXIT_FAILURE);
+
 }
 
 int main() {

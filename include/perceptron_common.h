@@ -50,6 +50,18 @@ struct KernelPerceptron_st{
     Kernel_t best_kernel;
 
     void *pDerivedObj;
+    
+    
+    // Object below are temporary structures used at intermediate steps of computation.
+    Matrix_t t_instBatch;
+    Matrix_t t_yBatch;
+	Matrix_t t_yPowerBatch;
+	Vector_t t_result;
+
+	Vector_t t_inst;
+	Vector_t t_y ;
+	Vector_t t_yPower ;
+ 	
 };
 
 typedef struct KernelPerceptron_st* KernelPerceptron_t;

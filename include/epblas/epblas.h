@@ -1,5 +1,6 @@
 #ifndef EPBLAS_H
 #define	EPBLAS_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -92,9 +93,18 @@ eparseError_t cloneMatrix(Matrix_t *dst, memoryAllocationDevice_t device,
 /**
 deallocate a matrix
 */
-eparseError_t deleteMatrix(Matrix_t m);
+eparseError_t __deleteMatrix(Matrix_t m);
 
-#define deleteVector deleteMatrix
+#define deleteVector(v){					\
+	EPARSE_CHECK_RETURN(__deleteMatrix(v))	\
+	v = NULL;								\
+}
+
+#define deleteMatrix(m){					\
+	EPARSE_CHECK_RETURN(__deleteMatrix(m))	\
+	m = NULL;								\
+}
+
 
 
 /**
@@ -113,33 +123,14 @@ eparseError_t vstackMatrix(Matrix_t *m1, memoryAllocationDevice_t device,
 #define vstackVector vstackMatrix
 
 void printMatrix(const char* heading, Matrix_t m, FILE *fp);
-
-
-
-static char *temp_buffer = NULL;
-
-inline static char* humanreadable_size(size_t bytes) {
-    if (temp_buffer == NULL) {
-        temp_buffer = (char*) malloc(1024);
-        check(temp_buffer != NULL, "Memory allocation error");
-    }
-
-    if (bytes >= 1024 * 1024 * 1024) {
-        sprintf(temp_buffer, "%.3f GB", bytes / 1024. / 1024. / 1024.);
-    } else if (bytes >= 1024 * 1024) {
-        sprintf(temp_buffer, "%.3f MB", bytes / 1024. / 1024.);
-    } else if (bytes >= 1024) {
-        sprintf(temp_buffer, "%.3f KB", bytes / 1024.);
-    } else
-        sprintf(temp_buffer, "%.3f", bytes/1.);
-
-    return temp_buffer;
-
-    error: exit(1);
-}
+char* humanreadable_size(size_t bytes);
 
 void setParallism(int nslave);
 bool getDynamicParallism();
 int getMaxParallism();
+
+// TODO: Implement for mkl based one also
+eparseError_t matrixDatacpyAnyToAny(Matrix_t dest, long dest_offset,
+        Matrix_t src, long src_offset, size_t bytes);
 
 #endif
