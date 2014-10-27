@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <CUnit/Basic.h>
 #include "epblas/epblas.h"
 
 /*
@@ -8,23 +7,26 @@
  */
 
 Matrix_t A;
-Matrix_t B;
-Matrix_t C;
 Matrix_t x;
 Vector_t y;
 Vector_t ones;
 
-float zero,one,two,three,result;
+float zero=0.,one=1.,two=2.,three,result;
 
 
 void testMatrixVectorProductDimMismatch(){
     // Dot product 3
-    newInitializedCPUMatrix(&A, "matrix A", 100, 1000, matrixInitFixed, &two, NULL);
-    newInitializedCPUVector(&x, "vector x", 1000, matrixInitFixed, &one, NULL);
-    newInitializedCPUVector(&y, "vector y", 1000, matrixInitFixed, &zero, NULL);
+    newInitializedGPUMatrix(&A, "matrix A", 100, 1000, matrixInitFixed, &two, NULL);
+    newInitializedGPUVector(&x, "vector x", 1000, matrixInitFixed, &one, NULL);
+    newInitializedGPUVector(&y, "vector y", 1000, matrixInitFixed, &zero, NULL);
 
 
-    CU_ASSERT_EQUAL(eparseColumnNumberMissmatch,prodMatrixVector(A, true, x, y))
+    check(eparseColumnNumberMissmatch == prodMatrixVector(A, true, x, y), "Matrix vector product could not capture dimension mismatch");
+
+	exit(EXIT_SUCCESS);
+
+error:
+	exit(EXIT_FAILURE);
 }
 
 

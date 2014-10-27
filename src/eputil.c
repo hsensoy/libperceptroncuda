@@ -32,7 +32,7 @@ char* eparseGetErrorString(eparseError_t status) {
 
 eparseError_t newProgress(Progress_t *p, const char *unit, int total, double report_rate) {
 
-    *p = malloc(sizeof (struct Progress_t));
+    *p = malloc(sizeof (struct Progress_st));
 
     if (*p == NULL)
         return eparseMemoryAllocationError;

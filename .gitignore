@@ -1,0 +1,9 @@
+# Build directory
+build
+_build
+
+# Archive
+*.zip
+*.tar
+*.tar.gz
+.idea

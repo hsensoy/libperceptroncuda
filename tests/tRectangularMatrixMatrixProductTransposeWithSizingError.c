@@ -1,39 +1,43 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <CUnit/Basic.h>
 #include "epblas/epblas.h"
 
 /*
  * CUnit Test Suite
  */
 
-Matrix_t A;
-Matrix_t B;
-Matrix_t C;
-Matrix_t x;
-Vector_t y;
+Matrix_t A=NULL;
+Matrix_t B=NULL;
+Matrix_t C=NULL;
+Matrix_t x=NULL;
+Vector_t y=NULL;
 Vector_t ones;
 
-float zero,one,two,three,result;
+float zero=0.,one=1.,two,three,result;
 
 
 void testRectangularMatrixMatrixProductTransposeWithSizingError(){
 
     // Dot product 4
-    newInitializedCPUMatrix(&A, "matrix A", 1000, 100, matrixInitFixed, &one, NULL);
-    newInitializedCPUMatrix(&B, "matrix B", 1000, 100, matrixInitFixed, &one, NULL);
-    newInitializedCPUMatrix(&C, "matrix C", 10000, 10000, matrixInitFixed, &zero, NULL);
+    newInitializedGPUMatrix(&A, "matrix A", 1000, 100, matrixInitFixed, &one, NULL);
+    newInitializedGPUMatrix(&B, "matrix B", 1000, 100, matrixInitFixed, &one, NULL);
+    newInitializedGPUMatrix(&C, "matrix C", 10000, 10000, matrixInitFixed, &zero, NULL);
 
 
-    CU_ASSERT_EQUAL(eparseColumnNumberMissmatch, prodMatrixMatrix(A,B, true, C))
+    check(eparseColumnNumberMissmatch == prodMatrixMatrix(A,B, true, C), "error in matrix matrix mult");
 
-    newInitializedCPUVector(&y, "vector y", 100, matrixInitFixed, &zero, NULL);
+    newInitializedGPUVector(&y, "vector y", 100, matrixInitFixed, &zero, NULL);
+    newInitializedGPUVector(&ones, "vector ones", 1000, matrixInitFixed, &one, NULL);
 
-    CU_ASSERT_EQUAL(eparseColumnNumberMissmatch, prodMatrixVector(C, false, ones, y))
+    check(eparseColumnNumberMissmatch == prodMatrixVector(C, false, ones, y), "error blas L2");
 
     float sum;
 
-    CU_ASSERT_EQUAL(eparseColumnNumberMissmatch, dot(y, ones, &sum))
+    check(eparseColumnNumberMissmatch == dot(y, ones, &sum), "error");
+
+	exit(EXIT_SUCCESS);
+error:
+	exit(EXIT_FAILURE);
 
 }
 

@@ -5,8 +5,8 @@
  *      Author: husnusensoy
  */
 
-#ifndef EPARSEUTIL_H_
-#define EPARSEUTIL_H_
+#ifndef EPUTIL_H_
+#define EPUTIL_H_
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,7 +51,7 @@ char* eparseGetErrorString(eparseError_t status);
 		} }
 
 
-struct Progress_t {
+struct Progress_st {
     char *unit;
     int total;
     int current;
@@ -61,7 +61,7 @@ struct Progress_t {
     int last_tick_count;
 };
 
-typedef struct Progress_t* Progress_t;
+typedef struct Progress_st* Progress_t;
 
 /**
 *

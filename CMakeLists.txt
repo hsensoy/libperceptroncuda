@@ -4,13 +4,14 @@ cmake_minimum_required(VERSION 2.8.4)
 SET( PROJ_NAME      "perceptroncuda" )
 SET( PROJ_PATH      ${CMAKE_SOURCE_DIR} )
 SET( PROJ_OUT_PATH  ${CMAKE_BINARY_DIR} )
-SET( PROJ_SOURCES   "src/perceptroncuda.c" "src/kernelperceptroncuda.c" "src/simpleperceptroncuda.c" "src/epblas/epblas_cuda.c" "src/epblas/epblas_common.c" "src/debug.c" "src/eputil.c")
-SET( PROJ_HEADERS   "perceptron.h" "kernelperceptron.h"  "simpleperceptron.h" "perceptron_common.h")
+SET( PROJ_SOURCES   "src/perceptroncuda.c" "src/kernelperceptroncuda.c" "src/simpleperceptroncuda.c" "src/epblas/epcudakernel.cu" "src/epblas/epblas_cuda.c" "src/epblas/epblas_common.c" "src/debug.c" "src/eputil.c")
+SET( PROJ_HEADERS   "perceptron.h" "kernelperceptron.h"  "simpleperceptron.h" "perceptron_common.h" "epcudakernel.h")
 SET( PROJ_LIBRARIES "-lcurand" )
 
-SET( PROJ_INCLUDES  "include" )
+SET( PROJ_INCLUDES  "include" "include/epblas" )
 
-#SET( CMAKE_SHARED_LINKER_FLAGS "-O3 -L/Users/husnusensoy/NetBeansProjects/ai-parse/epblas/build -lepblasmkl" CACHE STRING "" FORCE )
+#SET( CMAKE_SHARED_LINKER_FLAGS " -O3  -g -L/Users/husnusensoy/NetBeansProjects/ai-parse/epblas/build -lepblasmkl" CACHE STRING "" FORCE )
+SET( CMAKE_C_FLAGS "-std=gnu99  -DNDEBUG -O3   -g")
 
 
 SET (${PROJ_NAME}_VERSION_MAJOR 0)
@@ -20,7 +21,7 @@ SET (${PROJ_NAME}_VERSION_MINOR 1)
 PROJECT(${PROJ_NAME})
 
 FIND_PACKAGE(CUDA REQUIRED)
-SET( CUDA_NVCC_FLAGS "-O3 -arch=sm_20" CACHE STRING "nvcc flags" FORCE )
+SET( CUDA_NVCC_FLAGS "-O3  -g" CACHE STRING "nvcc flags" FORCE )
 SET( CUDA_VERBOSE_BUILD ON CACHE BOOL "nvcc verbose" FORCE )
 
 
@@ -42,6 +43,7 @@ enable_testing()
 SET ( PROJ_TESTS
 "t1"
 "t2"
+"t3"
 "tMatrixVectorProductDimMismatch"
 "tMatrixVectorProductwithTranspose"
 "tRectangularMatrixMatrixProduct"
@@ -53,7 +55,7 @@ SET ( PROJ_TESTS
 
 foreach( t ${PROJ_TESTS} )
     add_executable( test_${PROJ_NAME}_${t} tests/${t}.c)
-    target_link_libraries( test_${PROJ_NAME}_${t} "cunit" "perceptroncuda")
+    target_link_libraries( test_${PROJ_NAME}_${t} "perceptroncuda")
     add_test( test_${PROJ_NAME}_${t}  ./test_${PROJ_NAME}_${t} )
 endforeach(t)
 

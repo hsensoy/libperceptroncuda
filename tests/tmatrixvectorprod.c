@@ -1,52 +1,56 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <CUnit/Basic.h>
 #include "epblas/epblas.h"
 
 /*
  * CUnit Test Suite
  */
 
-Matrix_t A;
-Matrix_t B;
-Matrix_t C;
-Matrix_t x;
-Vector_t y;
-Vector_t ones;
+Matrix_t A=NULL;
+Matrix_t x= NULL;
+Vector_t y = NULL;
+Vector_t y_host = NULL;
+Vector_t ones=NULL;
 
-float zero,one,two,three,result;
+float zero=0.,one=1.,two=2.,three,result;
 
 
 void testMatrixVectorProduct() {
 
     // Dot product 1
-    newInitializedCPUMatrix(&A, "matrix A", 1000, 1000, matrixInitFixed, &one, NULL);
-    newInitializedCPUVector(&x, "vector x", 1000, matrixInitFixed, &one, NULL);
-    newInitializedCPUVector(&y, "vector y", 1000, matrixInitFixed, &zero, NULL);
+    newInitializedGPUMatrix(&A, "matrix A", 1000, 1000, matrixInitFixed, &one, NULL);
+    newInitializedGPUVector(&x, "vector x", 1000, matrixInitFixed, &one, NULL);
+    newInitializedGPUVector(&y, "vector y", 1000, matrixInitFixed, &zero, NULL);
 
 
 
     EPARSE_CHECK_RETURN(prodMatrixVector(A, false, x, y))
+ EPARSE_CHECK_RETURN(cloneVector(&y_host, memoryCPU, y, NULL))
 
     float sum = 0.0;
-    for(int i = 0;i < y->nrow;i++){
-        sum += (y->data)[i];
+    for(int i = 0;i < y_host->nrow;i++){
+        sum += (y_host->data)[i];
     }
 
-    CU_ASSERT_EQUAL(1000000, sum);
+	check( sum == 1000000., "L1 %f error",sum);
 
     // Dot product 2
-    newInitializedCPUMatrix(&A, "matrix A", 1000, 1000, matrixInitFixed, &two, NULL);
-    newInitializedCPUVector(&x, "vector x", 1000, matrixInitFixed, &one, NULL);
-    newInitializedCPUVector(&y, "vector y", 1000, matrixInitFixed, &zero, NULL);
+    newInitializedGPUMatrix(&A, "matrix A", 1000, 1000, matrixInitFixed, &two, NULL);
+    newInitializedGPUVector(&x, "vector x", 1000, matrixInitFixed, &one, NULL);
+    newInitializedGPUVector(&y, "vector y", 1000, matrixInitFixed, &zero, NULL);
+    newInitializedGPUVector(&ones, "ones", 1000, matrixInitFixed, &one, NULL);
 
 
     EPARSE_CHECK_RETURN(prodMatrixVector(A, false, x, y))
 
     EPARSE_CHECK_RETURN(dot(y, ones, &sum))
 
+      check( sum == 2000000, "L1 %f error",sum);
 
-    CU_ASSERT_EQUAL(2000000, sum);
+	exit(EXIT_SUCCESS);
+
+error:
+	exit(EXIT_FAILURE);
 
 
 }

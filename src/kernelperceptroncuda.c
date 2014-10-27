@@ -1,5 +1,5 @@
-#include <CoreFoundation/CoreFoundation.h>
 #include "kernelperceptron.h"
+#include "epblas/epcudautil.h"
 
 /**
 * Create a new kernel structure
@@ -35,6 +35,14 @@ static KernelPerceptron_t newKernelPerceptron(enum KernelType kerneltype) {
 
     kp->kerneltype = kerneltype;
     kp->c = 1;
+    
+    kp->t_instBatch = NULL;
+    kp->t_yBatch = NULL;
+	kp->t_yPowerBatch = NULL;
+	kp->t_result = NULL;
+	kp->t_y = NULL;
+	kp->t_yPower = NULL;
+ 	kp->t_inst = NULL;
 
     return kp;
 
@@ -52,6 +60,7 @@ static KernelPerceptron_t newKernelPerceptron(enum KernelType kerneltype) {
 void deleteKernel(Kernel_t k) {
     if (k != NULL) {
 
+	log_info("Dropping kernel perceptron");
         deleteMatrix(k->matrix);
         deleteVector(k->alpha);
         deleteVector(k->beta);
@@ -72,6 +81,16 @@ eparseError_t deleteKernelPerceptron(KernelPerceptron_t kp) {
 
     deleteKernel(kp->kernel);
     deleteKernel(kp->best_kernel);
+    
+    deleteMatrix( kp->t_instBatch);
+    deleteMatrix( kp->t_yBatch);
+	deleteMatrix( kp->t_yPowerBatch);
+	deleteVector( kp->t_result );
+
+	deleteVector ( kp->t_y);
+	deleteVector ( kp->t_yPower);
+	deleteVector ( kp->t_inst); 	
+
 
     if (kp->kerneltype == POLYNOMIAL_KERNEL)
         deletePolynomialKernelPerceptron((PolynomialKernelPerceptron_t) kp->pDerivedObj);
@@ -82,14 +101,41 @@ eparseError_t deleteKernelPerceptron(KernelPerceptron_t kp) {
 
 }
 
+static Vector_t changeAlphaPos = NULL, changeBetaPos = NULL;
+static Vector_t changeAlphaNeg = NULL, changeBetaNeg = NULL;
 
+static bool  changeInitialized = false;
+
+
+void initDeltas() {
+	if (!changeInitialized){
+		log_info("Initializing deltas");
+		float posOne = 1., negOne = 1;
+		
+		newInitializedGPUVector(&changeAlphaPos, "alpha pos", 1, matrixInitFixed, &posOne, NULL)
+		newInitializedGPUVector(&changeBetaPos, "beta pos", 1, matrixInitFixed, &posOne, NULL)
+		newInitializedGPUVector(&changeAlphaNeg, "alpha neg", 1, matrixInitFixed, &negOne, NULL)
+		newInitializedGPUVector(&changeBetaNeg, "beta neg", 1, matrixInitFixed, &negOne, NULL)
+	
+		changeInitialized = true;
+	}
+}
+/**
+	Update Perceptron by hypotesis vector
+	
+	@param kp Kernel Perceptron model
+	@param sv New or existing support vector instance
+*/
 eparseError_t updateKernelPerceptron(KernelPerceptron_t kp, Vector_t sv, long svidx, float change) {
-    Vector_t v = NULL;
+
+	initDeltas();
+    
 
     if (kp->kernel->matrix != NULL) {
         if (svidx < kp->kernel->matrix->nrow) {
+        	debug("Update alpha for h-vector %ld", svidx);
 
-
+			/*
             EPARSE_CHECK_RETURN(cloneVector(&v, memoryCPU, kp->kernel->alpha, "temp v"))
 
             (v->data)[svidx] += change;
@@ -101,72 +147,74 @@ eparseError_t updateKernelPerceptron(KernelPerceptron_t kp, Vector_t sv, long sv
             (v->data)[svidx] += change * kp->c;
 
             EPARSE_CHECK_RETURN(cloneVector(&(kp->kernel->beta), memoryGPU, v, "beta vector"))
+            */
 
-            deleteVector(v);
+            //deleteVector(v);
 
             return eparseSucess;
         }
         else if (svidx == kp->kernel->matrix->nrow) {
+        	debug("Add another h-vector");
 
             float init = change;
 
-            newInitializedCPUVector(&v, "temp v", 1, matrixInitFixed, &init, NULL)
 
             EPARSE_CHECK_RETURN(vstackMatrix(&(kp->kernel->matrix), memoryGPU, "kernel matrix", sv, true, false))
-            EPARSE_CHECK_RETURN(vstackMatrix(&(kp->kernel->alpha), memoryGPU, "alpha vector", v, true, false))
+            if (change < 0){
+	        	EPARSE_CHECK_RETURN(vstackMatrix(&(kp->kernel->alpha), memoryGPU, "alpha vector", changeAlphaNeg, true, false))
 
-            init = change * kp->c;
-            newInitializedCPUVector(&v, "temp v", 1, matrixInitFixed, &init, NULL)
-
-            EPARSE_CHECK_RETURN(vstackMatrix(&(kp->kernel->beta), memoryGPU, "beta vector", v, true, false))
-
-
-            deleteVector(v);
+        		//init = change * kp->c;
+        
+        
+        		EPARSE_CHECK_RETURN(vstackMatrix(&(kp->kernel->beta), memoryGPU, "beta vector", changeBetaNeg, true, false))
+        	}
+        	else{
+        		EPARSE_CHECK_RETURN(vstackMatrix(&(kp->kernel->alpha), memoryGPU, "alpha vector", changeAlphaPos, true, false))
+        
+        		EPARSE_CHECK_RETURN(vstackMatrix(&(kp->kernel->beta), memoryGPU, "beta vector", changeBetaPos, true, false))
+        	}
 
             return eparseSucess;
         }
         else {
-
             log_err("Update request for sv %ld violates maximum number of %ld", svidx, kp->kernel->matrix->nrow);
+
             return eparseIndexOutofBound;
         }
     }
     else {
+	    debug("Add the first h-vector");
         float init = change;
 
-        newInitializedCPUVector(&v, "temp v", 1, matrixInitFixed, &init, NULL)
-
         EPARSE_CHECK_RETURN(vstackMatrix(&(kp->kernel->matrix), memoryGPU, "kernel matrix", sv, true, false))
-        EPARSE_CHECK_RETURN(vstackMatrix(&(kp->kernel->alpha), memoryGPU, "alpha vector", v, true, false))
+        
+        if (change < 0){
+	        EPARSE_CHECK_RETURN(vstackMatrix(&(kp->kernel->alpha), memoryGPU, "alpha vector", changeAlphaNeg, true, false))
 
-        init = change * kp->c;
-        newInitializedCPUVector(&v, "temp v", 1, matrixInitFixed, &init, NULL)
+        	//init = change * kp->c;
+        
+        
+        	EPARSE_CHECK_RETURN(vstackMatrix(&(kp->kernel->beta), memoryGPU, "beta vector", changeBetaNeg, true, false))
+        }
+        else{
+        	EPARSE_CHECK_RETURN(vstackMatrix(&(kp->kernel->alpha), memoryGPU, "alpha vector", changeAlphaPos, true, false))
+        
+        	EPARSE_CHECK_RETURN(vstackMatrix(&(kp->kernel->beta), memoryGPU, "beta vector", changeBetaPos, true, false))
+        }
+        
 
-        EPARSE_CHECK_RETURN(vstackMatrix(&(kp->kernel->beta), memoryGPU, "beta vector", v, true, false))
-
-        deleteVector(v);
 
         return eparseSucess;
     }
 }
 
-
-
-
-
-static Matrix_t Y = NULL;
-static Matrix_t YPower = NULL;
-static Vector_t result = NULL;
-
 eparseError_t scoreBatchKernelPerceptron(KernelPerceptron_t kp, Matrix_t instarr, bool avg, Vector_t *result) {
-
+	
     check(instarr != NULL, "instarr should be initialized");
-
-
+    
     float zero = 0;
 
-
-    newInitializedCPUVector(result, "result", instarr->nrow, matrixInitFixed, &zero, NULL)
+    
 
     Matrix_t kernel_matrix = kp->kernel->matrix;
     if (kernel_matrix != NULL) {
@@ -174,29 +222,40 @@ eparseError_t scoreBatchKernelPerceptron(KernelPerceptron_t kp, Matrix_t instarr
 
             PolynomialKernelPerceptron_t pkp = (PolynomialKernelPerceptron_t) kp->pDerivedObj;
 
+			// FIX: poor performance.
+            EPARSE_CHECK_RETURN(newInitializedGPUMatrix(&(kp->t_yBatch), "t_yBatch", kernel_matrix->nrow, instarr->nrow, matrixInitFixed, &(pkp->bias), NULL))
+            //EPARSE_CHECK_RETURN(newInitializedGPUMatrix(&(kp->t_yPowerBatch), "t_yPowerBatch", kernel_matrix->nrow, instarr->nrow, matrixInitNone, NULL, NULL))
 
-            EPARSE_CHECK_RETURN(newInitializedGPUMatrix(&Y, "Y", kernel_matrix->nrow, instarr->nrow, matrixInitFixed, &(pkp->bias), NULL))
 
-            Matrix_t instarr_device = NULL;
+			if (instarr->dev == memoryGPU)
+	            EPARSE_CHECK_RETURN(prodMatrixMatrix(kernel_matrix, instarr, true, kp->t_yBatch))
+	        else{
+		        EPARSE_CHECK_RETURN(cloneMatrix(&(kp->t_instBatch), memoryGPU, instarr, "t_instBatch"))
+		        
+		        EPARSE_CHECK_RETURN(prodMatrixMatrix(kernel_matrix, kp->t_instBatch, true, kp->t_yBatch))
+		    }
 
-            EPARSE_CHECK_RETURN(cloneMatrix(&instarr_device, memoryGPU, instarr, "Device clone of instarr"))
 
-            EPARSE_CHECK_RETURN(prodMatrixMatrix(kernel_matrix, instarr_device, true, Y))
+           
 
-            EPARSE_CHECK_RETURN(deleteMatrix(instarr_device))
-
-            EPARSE_CHECK_RETURN(newInitializedGPUMatrix(&YPower, "Y Power", kernel_matrix->nrow, instarr->nrow, matrixInitNone, NULL, NULL))
-
-            EPARSE_CHECK_RETURN(powerMatrix(Y, pkp->power, YPower))
+            EPARSE_CHECK_RETURN(powerMatrix(kp->t_yBatch, pkp->power, NULL))
         } else {
             //TODO: Handle unknow subtype.
         }
+        
+        newInitializedGPUVector(&(kp->t_result), "t_result", instarr->nrow, matrixInitNone, NULL, NULL)
 
 
-        if (avg) EPARSE_CHECK_RETURN(prodMatrixVector(YPower, true, kp->kernel->alpha_avg, *result))
-        else EPARSE_CHECK_RETURN(prodMatrixVector(YPower, true, kp->kernel->alpha, *result))
-    }
-
+        if (avg) 
+        	EPARSE_CHECK_RETURN(prodMatrixVector(kp->t_yBatch, true, kp->kernel->alpha_avg, kp->t_result))
+        else 
+        	EPARSE_CHECK_RETURN(prodMatrixVector(kp->t_yBatch, true, kp->kernel->alpha, kp->t_result))
+        	
+        //EPARSE_CHECK_RETURN(cloneVector(result, memoryCPU,  kp->t_result,"result"))
+        
+    }else
+    	newInitializedCPUVector(result, "result", instarr->nrow, matrixInitFixed, &zero, NULL)
+    
 
     return eparseSucess;
 
@@ -204,8 +263,8 @@ eparseError_t scoreBatchKernelPerceptron(KernelPerceptron_t kp, Matrix_t instarr
     return eparseMemoryAllocationError;
 }
 
-static Vector_t y = NULL;
-static Vector_t yPower = NULL;
+
+
 
 eparseError_t scoreKernelPerceptron(KernelPerceptron_t kp, Vector_t inst, bool avg, float *s) {
     *s = 0.0;
@@ -216,22 +275,32 @@ eparseError_t scoreKernelPerceptron(KernelPerceptron_t kp, Vector_t inst, bool a
 
             PolynomialKernelPerceptron_t pkp = (PolynomialKernelPerceptron_t) kp->pDerivedObj;
 
-            newInitializedGPUVector(&y, "y", kernel_matrix->nrow, matrixInitFixed, &(pkp->bias), NULL)
+            newInitializedGPUVector(&(kp->t_y), "t_y", kernel_matrix->nrow, matrixInitFixed, &(pkp->bias), NULL)
 
-            EPARSE_CHECK_RETURN(prodMatrixVector(kernel_matrix, false, inst, y))
+		    if (inst->dev == memoryGPU){
+				
+            	EPARSE_CHECK_RETURN(prodMatrixVector(kernel_matrix, false, inst, kp->t_y))
+	 		}
+	 		else{
+				EPARSE_CHECK_RETURN(cloneVector(&(kp->t_inst), memoryGPU,inst, "instance on GPU" ))
+            	EPARSE_CHECK_RETURN(prodMatrixVector(kernel_matrix, false, kp->t_inst, kp->t_y))
+		
+			}
 
-            newInitializedGPUVector(&yPower, "y Power", kernel_matrix->nrow, matrixInitNone, NULL, NULL)
+            newInitializedGPUVector(&(kp->t_yPower), "t_yPower", kernel_matrix->nrow, matrixInitNone, NULL, NULL)
 
-            EPARSE_CHECK_RETURN(powerMatrix(y, pkp->power, yPower))
+            EPARSE_CHECK_RETURN(powerMatrix(kp->t_y, pkp->power, kp->t_yPower))
+            
         } else {
             //TODO: Handle unknown subtype.
         }
 
 
         if (avg)
-            EPARSE_CHECK_RETURN(dot(kp->kernel->alpha_avg, yPower, s))
+            EPARSE_CHECK_RETURN(dot(kp->kernel->alpha_avg, kp->t_yPower, s))
         else
-            EPARSE_CHECK_RETURN(dot(kp->kernel->alpha, yPower, s))
+            EPARSE_CHECK_RETURN(dot(kp->kernel->alpha, kp->t_yPower, s))
+            
     }
 
     return eparseSucess;
