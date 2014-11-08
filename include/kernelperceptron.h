@@ -4,6 +4,7 @@
 #include "epblas/epblas.h"
 #include "epblas/eputil.h"
 #include "debug.h"
+#include "util.h"
 #include "perceptron_common.h"
 
 KernelPerceptron_t __newPolynomialKernelPerceptron(int power, float bias);

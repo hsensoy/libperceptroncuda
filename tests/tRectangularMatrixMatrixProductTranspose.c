@@ -19,12 +19,12 @@ float zero=0.,one=1.,two,three,result;
 void testRectangularMatrixMatrixProductTranspose(){
 
     // Dot product 4
-    newInitializedGPUMatrix(&A, "matrix A", 1000, 100, matrixInitFixed, &one, NULL);
-    newInitializedGPUMatrix(&B, "matrix B", 1000, 100, matrixInitFixed, &one, NULL);
+    newInitializedGPUMatrix(&A, "matrix A", 100, 1000, matrixInitFixed, &one, NULL);
+    newInitializedGPUMatrix(&B, "matrix B", 100, 1000, matrixInitFixed, &one, NULL);
     newInitializedGPUMatrix(&C, "matrix C", 1000, 1000, matrixInitFixed, &zero, NULL);
 
 
-    EPARSE_CHECK_RETURN(prodMatrixMatrix(A,B, true, C))
+    EPARSE_CHECK_RETURN(prodMatrixMatrix(A,true, B, C))
 
     newInitializedGPUVector(&y, "vector y", 1000, matrixInitFixed, &zero, NULL);
     newInitializedGPUVector(&ones, "vector 1s", 1000, matrixInitFixed, &one, NULL);

@@ -24,6 +24,8 @@ char* eparseGetErrorString(eparseError_t status) {
             return "Unsupported Kernel Type";
         case eparseIndexOutofBound:
             return "Index out of bound";
+		case eparseTooLargeCudaOp:
+			return "Operation is beyond the limits of CUDA";
         default:
             return "Unknown error";
     }

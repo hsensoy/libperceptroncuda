@@ -44,7 +44,7 @@ eparseError_t newMatrix(Matrix_t *mptr, memoryAllocationDevice_t device,
         const char *id, long nrow, long ncol);
 
 #define newVector(vptr, device, id, n){	\
-	newMatrix( (vptr), (device), (id), 1, (n));	\
+	newMatrix( (vptr), (device), (id), (n), (1));	\
 	(*vptr)->isvector = true;	\
 }
 
@@ -74,7 +74,7 @@ eparseError_t newInitializedMatrix(Matrix_t *mptr,
 #define newInitializedGPUMatrix(mptr, id,  nrow,  ncol,  strategy, fix_value,  stream) newInitializedMatrix( (mptr),  memoryGPU, (id),  (nrow),  (ncol),  (strategy), (fix_value),  (stream))
 
 eparseError_t prodMatrixVector(Matrix_t A, bool tA, Vector_t x, Vector_t y);
-eparseError_t prodMatrixMatrix(Matrix_t A, Matrix_t B, bool tB, Matrix_t C);
+eparseError_t prodMatrixMatrix(Matrix_t A, bool tA, Matrix_t B, Matrix_t C);
 eparseError_t powerMatrix(Matrix_t x, int power, Matrix_t y);
 eparseError_t dot(Vector_t x, Vector_t y, float *result);
 
@@ -87,6 +87,9 @@ clone a given matrix
 */
 eparseError_t cloneMatrix(Matrix_t *dst, memoryAllocationDevice_t device,
         const Matrix_t src, const char *new_id);
+
+eparseError_t mtrxcolcpy(Matrix_t *dst, memoryAllocationDevice_t device,
+        const Matrix_t src, const char *new_id, long offsetcol, long ncol);
 
 #define cloneVector(dst, device, src, new_id ) cloneMatrix((dst),(device),(src),(new_id))
 
@@ -121,6 +124,13 @@ eparseError_t vstackMatrix(Matrix_t *m1, memoryAllocationDevice_t device,
         const char* id, Matrix_t m2, bool transposeM2, bool releaseM2);
 
 #define vstackVector vstackMatrix
+		
+eparseError_t hstack(Matrix_t *m1, memoryAllocationDevice_t device, const char* id, Matrix_t m2, bool transposeM2, bool releaseM2);		
+
+
+
+eparseError_t vappend(Vector_t *v, memoryAllocationDevice_t device, const char* id, float value);
+
 
 void printMatrix(const char* heading, Matrix_t m, FILE *fp);
 char* humanreadable_size(size_t bytes);

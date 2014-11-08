@@ -24,7 +24,7 @@ void testSquareMatrixMatrixProduct(){
     newInitializedGPUMatrix(&C, "matrix C", 1000, 1000, matrixInitFixed, &zero, NULL);
 
 
-    EPARSE_CHECK_RETURN(prodMatrixMatrix(A,B, false, C))
+    EPARSE_CHECK_RETURN(prodMatrixMatrix(A,false, B, C))
 
     newInitializedGPUVector(&y, "vector y", 1000, matrixInitFixed, &zero, NULL);
     newInitializedGPUVector(&ones, "vector ones", 1000, matrixInitFixed, &one, NULL);
