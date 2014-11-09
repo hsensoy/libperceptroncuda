@@ -28,11 +28,11 @@ void testMatrixVectorProduct() {
  EPARSE_CHECK_RETURN(cloneVector(&y_host, memoryCPU, y, NULL))
 
     float sum = 0.0;
-    for(int i = 0;i < y_host->nrow;i++){
+    for(long i = 0;i < 1000;i++){
         sum += (y_host->data)[i];
     }
 
-	check( sum == 1000000., "L1 %f error",sum);
+	check( sum == (float)1000000., "L1 %f error",sum);
 
     // Dot product 2
     newInitializedGPUMatrix(&A, "matrix A", 1000, 1000, matrixInitFixed, &two, NULL);

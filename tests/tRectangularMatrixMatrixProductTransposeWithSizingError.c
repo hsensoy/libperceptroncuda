@@ -19,12 +19,12 @@ float zero=0.,one=1.,two,three,result;
 void testRectangularMatrixMatrixProductTransposeWithSizingError(){
 
     // Dot product 4
-    newInitializedGPUMatrix(&A, "matrix A", 1000, 100, matrixInitFixed, &one, NULL);
-    newInitializedGPUMatrix(&B, "matrix B", 1000, 100, matrixInitFixed, &one, NULL);
+    newInitializedGPUMatrix(&A, "matrix A", 100, 1000, matrixInitFixed, &one, NULL);
+    newInitializedGPUMatrix(&B, "matrix B", 100, 1000, matrixInitFixed, &one, NULL);
     newInitializedGPUMatrix(&C, "matrix C", 10000, 10000, matrixInitFixed, &zero, NULL);
 
 
-    check(eparseColumnNumberMissmatch == prodMatrixMatrix(A,B, true, C), "error in matrix matrix mult");
+    check(eparseColumnNumberMissmatch == prodMatrixMatrix(A,true,B, C), "error in matrix matrix mult");
 
     newInitializedGPUVector(&y, "vector y", 100, matrixInitFixed, &zero, NULL);
     newInitializedGPUVector(&ones, "vector ones", 1000, matrixInitFixed, &one, NULL);

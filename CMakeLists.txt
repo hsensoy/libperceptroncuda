@@ -11,7 +11,7 @@ SET( PROJ_LIBRARIES "-lcurand" )
 SET( PROJ_INCLUDES  "include" "include/epblas" )
 
 #SET( CMAKE_SHARED_LINKER_FLAGS " -O3  -g -L/Users/husnusensoy/NetBeansProjects/ai-parse/epblas/build -lepblasmkl" CACHE STRING "" FORCE )
-SET( CMAKE_C_FLAGS "-std=gnu99  -DNDEBUG -O3   -g")
+SET( CMAKE_C_FLAGS "-std=gnu99 -Wall -O3 -DNDEBUG  -g")
 
 
 SET (${PROJ_NAME}_VERSION_MAJOR 0)
@@ -21,7 +21,7 @@ SET (${PROJ_NAME}_VERSION_MINOR 1)
 PROJECT(${PROJ_NAME})
 
 FIND_PACKAGE(CUDA REQUIRED)
-SET( CUDA_NVCC_FLAGS "-O3  -g" CACHE STRING "nvcc flags" FORCE )
+SET( CUDA_NVCC_FLAGS "-O3 -DNDEBUG -arch=sm_20" CACHE STRING "nvcc flags" FORCE )
 SET( CUDA_VERBOSE_BUILD ON CACHE BOOL "nvcc verbose" FORCE )
 
 
@@ -51,7 +51,8 @@ SET ( PROJ_TESTS
 "tRectangularMatrixMatrixProductTransposeWithSizingError"
 "tSquareMatrixMatrixProduct"
 "tdotprod"
-"tmatrixvectorprod" )
+"tmatrixvectorprod"
+"tSimple" )
 
 foreach( t ${PROJ_TESTS} )
     add_executable( test_${PROJ_NAME}_${t} tests/${t}.c)
@@ -60,6 +61,7 @@ foreach( t ${PROJ_TESTS} )
 endforeach(t)
 
 
-set (CMAKE_INSTALL_PREFIX /Users/husnusensoy/ai-lab)
+#set (CMAKE_INSTALL_PREFIX /home/hsensoy/ai-lab)
 install(TARGETS ${PROJ_NAME} DESTINATION lib)
-install(FILES include/perceptron_common.h include/perceptron.h DESTINATION include)
+install(FILES include/perceptron_common.h include/perceptron.h include/debug.h DESTINATION include)
+install(FILES include/epblas/eputil.h include/epblas/epblas.h DESTINATION include/epblas)

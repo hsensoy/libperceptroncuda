@@ -11,7 +11,7 @@ void succesiveUpdatandScore() {
     Vector_t v = NULL;
 
     float somevalue = 1.;
-    int nupdate = 40000;
+    int nupdate = 40;
     newInitializedCPUVector(&v, "vector", 180, matrixInitFixed, &somevalue, NULL);
 
 	Progress_t ptested = NULL;
@@ -38,7 +38,7 @@ void succesiveUpdatandScore() {
         EPARSE_CHECK_RETURN(update(pkp,v,hvidx++,-1))
         EPARSE_CHECK_RETURN(update(pkp,v,hvidx++,-1))
 
-        check(((KernelPerceptron_t)pkp->pDeriveObj)->kernel->matrix->nrow == hvidx, "Expected number of sv %ld violates the truth %ld",((KernelPerceptron_t)pkp->pDeriveObj)->kernel->matrix->nrow, hvidx )
+        check(((KernelPerceptron_t)pkp->pDeriveObj)->kernel->matrix->ncol == hvidx, "Expected number of sv %ld violates the truth %ld",((KernelPerceptron_t)pkp->pDeriveObj)->kernel->matrix->ncol, hvidx )
 
     }
 

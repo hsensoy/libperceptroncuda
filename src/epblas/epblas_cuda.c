@@ -6,6 +6,9 @@ static cublasHandle_t handle = NULL;
 
 #define version "CUDA Enabled Embedding Parser BLAS"
 
+#define GPU_MEMORY_GROWTH_RATE 1.2
+#define CPU_MEMORY_GROWTH_RATE 1.5
+
 void init(){
 	if (handle == NULL)
 		CUDABLAS_CHECK_RETURN(cublasCreate(&handle))
@@ -47,22 +50,27 @@ eparseError_t ensureMatrixCapacity(Matrix_t mptr, long nrequired) {
     if (mptr == NULL) {
         return eparseNullPointer;
     } else {
-        if (nrequired <= mptr->capacity) {
+        if (nrequired < mptr->capacity) {
             return eparseSucess;
         } else {
-            long newCapacity = (long) ((nrequired * 6. / 2) + 1);
+	    long newCapacity; 
+
+	    if ( mptr->dev == memoryGPU )
+	    	newCapacity = (long) ((nrequired * GPU_MEMORY_GROWTH_RATE) + 1);
+	    else
+	    	newCapacity = (long) ((nrequired * CPU_MEMORY_GROWTH_RATE) + 1);
             
             
-            log_info(
+            debug(
                     "Growing <%s>@%s capacity \tfrom %ld:%ld (%s)",
                     (mptr->identifier), 
                     ((mptr->dev == memoryGPU) ? "GPU" : "CPU"), (mptr->capacity), (mptr->n),
                     (humanreadable_size(sizeof(float) * (mptr->capacity))));
-            log_info(
+            debug(
                     "\t\t\t\t\tto %ld:%ld (%s)",
                     newCapacity,nrequired,
                     (humanreadable_size(sizeof(float) * newCapacity)));
-            log_info(
+            debug(
                     "\t\t\t\t\tfor %ld x %ld matrix", 
                     (mptr->nrow), (mptr->ncol));
             
@@ -74,7 +82,7 @@ eparseError_t ensureMatrixCapacity(Matrix_t mptr, long nrequired) {
                 } else {
                     mptr->data = (float*) malloc(sizeof(float) * newCapacity);
                     
-                    check_mem(mptr->data);
+                    check( mptr->data != NULL, "Memory allocation error of %ld bytes",sizeof(float) * newCapacity );
                 }
 
             } 
@@ -178,7 +186,7 @@ eparseError_t newMatrix(Matrix_t *mptr, memoryAllocationDevice_t device,
         (*mptr)->dev = device ;
     }
     else{
-    	check((*mptr)->dev == device, "You can not change memory type from %d to %d for %s", (*mptr)->identifier, (*mptr)->dev,  device);
+    	check((*mptr)->dev == device, "You can not change memory type for %s from %d to %d", (*mptr)->identifier, (*mptr)->dev,  device);
     }
 
     
@@ -226,7 +234,7 @@ eparseError_t vstackMatrix(Matrix_t *m1, memoryAllocationDevice_t device,
             #endif
 
         } else {
-        	check((*m1)->dev == device, "You can not change memory type from %d to %d for %s", (*m1)->identifier, (*m1)->dev,  device);
+        	check((*m1)->dev == device, "You can not change memory type for %s from %d to %d", (*m1)->identifier, (*m1)->dev,  device);
         	
             offset = (*m1)->n;
 
@@ -271,21 +279,117 @@ eparseError_t vstackMatrix(Matrix_t *m1, memoryAllocationDevice_t device,
     	return eparseMemoryAllocationError;
 }
 
+
+eparseError_t vappend(Vector_t *v, memoryAllocationDevice_t device, const char* id, float value){
+	
+    long copy_bytes = sizeof(float) * 1;
+    long offset = 0;
+
+    if (*v == NULL) {
+        offset = 0;
+			
+		newVector(v, device, id, 1)
+			
+		float temp = value;
+			
+        if (device == memoryCPU) {
+            memcpy((*v)->data, &temp, copy_bytes);
+        } else {
+            cudaMemcpy((*v)->data, &temp, copy_bytes, cudaMemcpyHostToDevice);
+        }
+    } else {
+    	check((*v)->dev == device, "You can not change memory type of %s from %d to %d", (*v)->identifier, (*v)->dev,  device);
+    	
+        offset = (*v)->n;
+
+
+		(*v)->nrow += 1;
+    		
+        EPARSE_CHECK_RETURN(ensureMatrixCapacity((*v), (*v)->n + 1))
+
+        
+		float temp = value;
+		
+        if (device == memoryCPU) {
+            memcpy((*v)->data + offset, &temp, copy_bytes);
+        } else {
+            cudaMemcpy((*v)->data + offset, &temp, copy_bytes, cudaMemcpyHostToDevice);
+        }
+        
+    	(*v)->n += 1;
+    }
+
+    return eparseSucess;
+error:
+	return eparseMemoryAllocationError;	
+}
+
+eparseError_t hstack(Matrix_t *m1, memoryAllocationDevice_t device, const char* id, Matrix_t m2, bool transposeM2, bool releaseM2){
+	
+	if(m2 == NULL)
+		return eparseNullPointer;
+	else{
+		long copy_bytes = sizeof(float) * m2->n;
+		long offset = -1000000;
+		
+		if(*m1 == NULL)
+		{
+			offset = 0;
+			
+			
+			EPARSE_CHECK_RETURN(newMatrix(m1, device, id, 0, 0))
+						
+			ensureMatrixCapacity(*m1, m2->n);
+		}else {
+			offset = (*m1)->n;
+
+			if (((*m1)->nrow == m2->nrow && !transposeM2)
+					|| ((*m1)->nrow == m2->ncol && transposeM2) ) {
+				ensureMatrixCapacity((*m1), (*m1)->n + m2->n);
+			} else {
+				return eparseColumnNumberMissmatch;
+
+			}
+		}
+		
+		EPARSE_CHECK_RETURN(matrixDatacpyAnyToAny(*m1, offset,
+		        m2, 0, copy_bytes))
+		
+		if (transposeM2) {
+			(*m1)->nrow = m2->ncol;
+			(*m1)->ncol += m2->nrow;
+		} else {
+			(*m1)->nrow = m2->nrow;
+			(*m1)->ncol += m2->ncol;
+		}
+
+		(*m1)->n += m2->n;
+		
+	}
+	
+	if (releaseM2)
+		deleteMatrix(m2);
+
+	return eparseSucess;
+	
+}
+
 eparseError_t __deleteMatrix(Matrix_t m) {
-if (m != NULL){
-    if (m->dev == memoryCPU)
-        free(m->data);
-    else
-        cudaFree(m->data);
-
-    free(m);
-
-    return eparseSucess;
-}
-else{
-	log_warn("Nothing to free");
-    return eparseSucess;
-}
+	if (m != NULL){
+		if (m->dev == memoryCPU)
+			free(m->data);
+		else
+			cudaFree(m->data);
+		
+		free(m);
+		
+		return eparseSucess;
+	}
+	else{
+		log_warn("Nothing to free");
+		
+		return eparseSucess;
+	}
 }
 
 
@@ -302,37 +406,49 @@ eparseError_t newInitializedMatrix(Matrix_t *mptr,
     } else if (strategy == matrixInitFixed) {
 
         if ((*mptr)->dev == memoryGPU) {
-        	/*
-            long i;
-            float *temp = (float*) malloc(sizeof(float) * nrow * ncol);
-
-            for (i = 0; i < nrow * ncol; i++)
-                temp[i] = *fix_value;
-
-            CUDA_CHECK_RETURN(cudaMemcpy((*mptr)->data, temp, nrow * ncol * sizeof(float),
-                    cudaMemcpyHostToDevice))
-
-            free(temp);
-            */
-            
-            EPARSE_CHECK_RETURN(vsInitx( (*mptr)->n, (*mptr)->data, *fix_value))
+			/*
+			Matrix_t temp = NULL;
+			EPARSE_CHECK_RETURN(newMatrix(&temp, memoryCPU, "temp", nrow, ncol));
+			for(size_t i = 0; i < temp->n; ++i)
+				(temp->data)[i] = *fix_value;
+	
+			EPARSE_CHECK_RETURN(cloneMatrix(mptr, memoryGPU, temp, id))
+				
+			EPARSE_CHECK_RETURN(__deleteMatrix(temp))
+        	*/
+			
+			EPARSE_CHECK_RETURN(vsInitx( (*mptr)->n, (*mptr)->data, *fix_value))
+				
         } else {
             for (int i = 0; i < nrow * ncol; i++)
                 ((*mptr)->data)[i] = *fix_value;
         }
-    } else {
-        if (strategy != matrixInitRandom)
-            debug("Unknown initialization strategy. Failed back to random");
+    } else if (strategy == matrixInitCArray) {
 
-        if ((*mptr)->dev == memoryGPU){
-            ;
-
-            //curandGenerateNormal((curandGenerator_t)stream, (*mptr)->data, nrow * ncol, 0., 1.);
-        }
-        else {
+        if ((*mptr)->dev == memoryGPU) {
+			log_warn("Unknown initialization strategy. Failed back to random");
+			
+			return eparseFailOthers;
+				
+        } else {
             for (int i = 0; i < nrow * ncol; i++)
-                ((*mptr)->data)[i] = 0.0;
+                ((*mptr)->data)[i] = fix_value[i];
         }
+    }
+	else {
+        if (strategy != matrixInitRandom)
+            log_warn("Unknown initialization strategy. Failed back to random");
+
+		//TODO: Implement random initialization for GPU and CPU Matrix
+    	if ((*mptr)->dev == memoryGPU){
+        	;
+
+			//curandGenerateNormal((curandGenerator_t)stream, (*mptr)->data, nrow * ncol, 0., 1.);
+		}
+		else {
+        	for (int i = 0; i < nrow * ncol; i++)
+            	((*mptr)->data)[i] = 0.0;
+		}
     }
 
 
@@ -354,12 +470,12 @@ eparseError_t cloneMatrix(Matrix_t *dst, memoryAllocationDevice_t device,
         EPARSE_CHECK_RETURN(matrixDatacpyAnyToAny(*dst, 0, src, 0, src->n * sizeof(float)));
         
         #ifndef NDEBUG
-        if ((*dst)->dev != src->dev){
-            	if ((*dst)->dev == memoryCPU )
-	            	log_info( "DtoH of %ld bytes", src->n * sizeof(float));
-	            else
-	            	log_info( "HtoD of %ld bytes", src->n * sizeof(float));
-        }
+		    if ((*dst)->dev != src->dev){
+		        	if ((*dst)->dev == memoryCPU )
+		            	log_info( "DtoH of %ld bytes", src->n * sizeof(float));
+		            else
+		            	log_info( "HtoD of %ld bytes", src->n * sizeof(float));
+		    }
         #endif
         
 
@@ -367,6 +483,27 @@ eparseError_t cloneMatrix(Matrix_t *dst, memoryAllocationDevice_t device,
     }
 
 }
+
+eparseError_t mtrxcolcpy(Matrix_t *dst, memoryAllocationDevice_t device,
+        const Matrix_t src, const char *new_id, long offsetcol, long ncol) { 
+    if (src == NULL) {
+        return eparseNullPointer;
+    } else {
+		check( ncol > 0, "Number of columns to be copied (ncol) should be positive");
+		check( offsetcol >= 0 && offsetcol < src->ncol , "Column offset (offsetcol) should be between [0, # of columns source)");
+		
+        EPARSE_CHECK_RETURN(
+                newInitializedMatrix(dst, device, (new_id == NULL) ? (src->identifier) : new_id, src->nrow, MIN(src->ncol,ncol), matrixInitNone, NULL, NULL))
+
+        EPARSE_CHECK_RETURN(matrixDatacpyAnyToAny(*dst, 0, src, offsetcol * src->nrow, MIN(src->ncol,ncol) * src->nrow * sizeof(float)));
+
+        return eparseSucess;
+    }	
+	
+	error:
+	return eparseFailOthers;
+}
+
 
 eparseError_t prodMatrixVector(Matrix_t A, bool tA, Vector_t x, Vector_t y){
 	init();
@@ -388,11 +525,11 @@ eparseError_t prodMatrixVector(Matrix_t A, bool tA, Vector_t x, Vector_t y){
                 return eparseColumnNumberMissmatch;
             }
 
-
+			
             CUDABLAS_CHECK_RETURN(cublasSgemv(handle, CUBLAS_OP_N,
-                    A->nrow,A->ncol,&alpha,
-                    A->data,
-                    A->nrow,x->data,1,&beta,y->data, 1))
+							                    A->nrow,A->ncol,&alpha,
+							                    A->data,
+							                    A->ncol,x->data,1,&beta,y->data, 1))
 
 
 
@@ -417,20 +554,18 @@ eparseError_t prodMatrixVector(Matrix_t A, bool tA, Vector_t x, Vector_t y){
         return eparseMemoryAllocationError;
 }
 
-eparseError_t prodMatrixMatrix(Matrix_t A, Matrix_t B, bool tB, Matrix_t C){
+eparseError_t prodMatrixMatrix(Matrix_t A, bool tA, Matrix_t B, Matrix_t C){
 	init();
 
     if (A->nrow == 0)
         return eparseSucess;
-    else if( !((A->ncol == B->nrow && !tB) || (A->ncol == B->ncol && tB)) )
-        return eparseColumnNumberMissmatch;
     else{
         float alpha = 1., beta = 0.;
 
         check(A->dev == memoryGPU && B->dev ==memoryGPU, "Matrix(A) or Matrix(B) is not stored in device memory");
 
-        if (!tB){
-            if( !(A->nrow == C->nrow && B->ncol == C->ncol) ){
+        if (!tA){
+            if( !(A->ncol == B->nrow && A->nrow == C->nrow && B->ncol == C->ncol) ){
 
                 log_err("A(%ldx%ld) x B(%ldx%ld) does not conform with C(%ldx%ld)", A->nrow,A->ncol, B->nrow, B->ncol,C->nrow,C->ncol);
                 return eparseColumnNumberMissmatch;
@@ -444,22 +579,22 @@ eparseError_t prodMatrixMatrix(Matrix_t A, Matrix_t B, bool tB, Matrix_t C){
                     &alpha,
                     A->data, A->nrow,B->data, B->nrow,
                     &beta,
-                    C->data, C->ncol))
+                    C->data, C->nrow))
 
 
 
         }
         else{
-            if( !(A->nrow == C->nrow && B->nrow == C->ncol)){
-                log_err( "A(%ldx%ld) x B(%ldx%ld)^T does not conform with C(%ldx%ld)", A->nrow,A->ncol, B->nrow, B->ncol,C->nrow,C->ncol);
+            if( !(A->nrow == B->nrow && A->ncol == C->nrow && B->ncol == C->ncol)){
+                log_err( "A(%ldx%ld)^T x B(%ldx%ld) does not conform with C(%ldx%ld)", A->nrow,A->ncol, B->nrow, B->ncol,C->nrow,C->ncol);
                 return eparseColumnNumberMissmatch;
             }
 
 
             CUDABLAS_CHECK_RETURN(
                     cublasSgemm( handle,
-                            CUBLAS_OP_N, CUBLAS_OP_T,
-                            A->nrow, B->nrow, A->ncol,
+                            CUBLAS_OP_T, CUBLAS_OP_N,
+                            A->ncol, B->ncol, A->nrow,
                             &alpha,
                             A->data, A->nrow,B->data, B->nrow,
                             &beta,
@@ -485,13 +620,15 @@ eparseError_t powerMatrix(Matrix_t x, int power, Matrix_t y){
     */
 
     check(x->dev == memoryGPU, "Vector(x) should be on GPU memory");
+	check(y == NULL,"powerMatrix implementation on CUDA is inplace. Set y to NULL and check x for output.")
     
-    EPARSE_CHECK_RETURN( vsPowx(x->n,x->data, power) )
-
-    /*
+	EPARSE_CHECK_RETURN( vsPowx(x->n,x->data, power) )
+	/*	
+		Matrix_t x_host = NULL;
+    
     EPARSE_CHECK_RETURN(cloneMatrix(&x_host, memoryCPU, x, "x host"))
     
-    for(int i =0;i<x_host->n;i++)
+    for(long i =0;i<x_host->n;i++)
         (x_host->data)[i] = powf((x_host->data)[i],power);
 
 	//    CUDABLAS_CHECK_RETURN(cublasSetVector(x_host->n, sizeof(float), x_host->data, 1, y->data, 1))
@@ -499,16 +636,17 @@ eparseError_t powerMatrix(Matrix_t x, int power, Matrix_t y){
     
     
 
-	EPARSE_CHECK_RETURN(matrixDatacpyAnyToAny(y, 0,
-        x_host, 0, sizeof(float) * y->n))
-        */
+	EPARSE_CHECK_RETURN(matrixDatacpyAnyToAny(x, 0,
+        x_host, 0, sizeof(float) * x->n))
+			
 
-    //deleteMatrix(x_host)
+	__deleteMatrix(x_host);
+		*/
 
     return eparseSucess;
-
-    error:
-        return eparseMemoryAllocationError;
+	
+error:
+	return eparseMemoryAllocationError;
 
 }
 
