@@ -4,13 +4,13 @@ cmake_minimum_required(VERSION 2.8.4)
 SET( PROJ_NAME      "perceptroncuda" )
 SET( PROJ_PATH      ${CMAKE_SOURCE_DIR} )
 SET( PROJ_OUT_PATH  ${CMAKE_BINARY_DIR} )
-SET( PROJ_SOURCES   "src/perceptroncuda.c" "src/kernelperceptroncuda.c" "src/simpleperceptroncuda.c" "src/epblas/epcudakernel.cu" "src/epblas/epblas_cuda.c" "src/epblas/epblas_common.c" "src/debug.c" "src/eputil.c")
+SET( PROJ_SOURCES   "src/perceptroncuda.c" "src/kernelperceptroncuda.c" "src/simpleperceptroncuda.c" "src/epblas/epcudakernel.cu" "src/epblas/epblas_cuda.c" "src/epblas/epblas_common.c" "src/eputil.c")
 SET( PROJ_HEADERS   "perceptron.h" "kernelperceptron.h"  "simpleperceptron.h" "perceptron_common.h" "epcudakernel.h")
 SET( PROJ_LIBRARIES "-lcurand" )
 
-SET( PROJ_INCLUDES  "include" "include/epblas" )
+SET( PROJ_INCLUDES  "include" "include/epblas" "/usr/local/include/shared" )
 
-#SET( CMAKE_SHARED_LINKER_FLAGS " -O3  -g -L/Users/husnusensoy/NetBeansProjects/ai-parse/epblas/build -lepblasmkl" CACHE STRING "" FORCE )
+SET( CMAKE_SHARED_LINKER_FLAGS " -O3 /usr/local/lib/shared/libshared.a" CACHE STRING "" FORCE )
 SET( CMAKE_C_FLAGS "-std=gnu99 -Wall -O3 -DNDEBUG  -g")
 
 
@@ -57,11 +57,12 @@ SET ( PROJ_TESTS
 foreach( t ${PROJ_TESTS} )
     add_executable( test_${PROJ_NAME}_${t} tests/${t}.c)
     target_link_libraries( test_${PROJ_NAME}_${t} "perceptroncuda")
+    target_link_libraries( test_${PROJ_NAME}_${t} "/usr/local/lib/shared/libshared.a")
     add_test( test_${PROJ_NAME}_${t}  ./test_${PROJ_NAME}_${t} )
 endforeach(t)
 
 
 #set (CMAKE_INSTALL_PREFIX /home/hsensoy/ai-lab)
 install(TARGETS ${PROJ_NAME} DESTINATION lib)
-install(FILES include/perceptron_common.h include/perceptron.h include/debug.h DESTINATION include)
-install(FILES include/epblas/eputil.h include/epblas/epblas.h DESTINATION include/epblas)
+install(FILES include/perceptron_common.h include/perceptron.h DESTINATION include/perceptron)
+install(FILES include/epblas/eputil.h include/epblas/epblas.h DESTINATION include/perceptron/epblas)
