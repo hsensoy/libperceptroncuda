@@ -3,56 +3,79 @@
 #include "perceptron.h"
 #include "debug.h"
 #include <cuda_profiler_api.h>
+#include <math.h>
 
-#define NSENTENCE 10000
-#define AVG_SENTENCE_LENGTH 20
-#define XFORMED_EMBEDDING_LENGTH 720
+#define NSENTENCE 1000
+#define AVG_SENTENCE_LENGTH 50
+#define XFORMED_EMBEDDING_LENGTH 1000
+
+#define EQUAL_WITH_EPSILON(expected, actual, epsilon) ( fabs ( (expected) - (actual)) <= epsilon )
 
 
 void succesiveUpdatandScore() {
-    Perceptron_t pkp = newPolynomialKernelPerceptron(2, 1.);
+    Perceptron_t pkp = newPolynomialKernelPerceptron(2, 1.f);
 
+	/*
+		TODO Allocate deallocate succesively.
+	*/
+    Vector_t v = NULL;
 
-    Vector_t v = NULL,vScore= NULL;
-    Matrix_t vBatch = NULL;
-
-    float somevalue = 1.;
+    float somevalue = .1f;
     
-    newInitializedGPUVector(&v, "vector", XFORMED_EMBEDDING_LENGTH, matrixInitFixed, &somevalue, NULL);
-
+    newInitializedCPUVector(&v, "vector", XFORMED_EMBEDDING_LENGTH, matrixInitFixed, &somevalue, NULL);
 
     log_info("Allocation is done");
 	Progress_t ptested = NULL;
 	EPARSE_CHECK_RETURN(newProgress(&ptested, "test sentences", NSENTENCE, 0.1))
-	
-	EPARSE_CHECK_RETURN(newInitializedGPUMatrix(&vBatch, "arc matrix", AVG_SENTENCE_LENGTH * AVG_SENTENCE_LENGTH, XFORMED_EMBEDDING_LENGTH, matrixInitNone, NULL,NULL))
-	
-    for (int j = 0; j < AVG_SENTENCE_LENGTH * AVG_SENTENCE_LENGTH; j++)
-		EPARSE_CHECK_RETURN(matrixDatacpyAnyToAny(vBatch, j * XFORMED_EMBEDDING_LENGTH, v, 0, sizeof(float) * v->n))
-	
+		
 	int hvidx = 0;
-    for (int i = 0; i < NSENTENCE; i++) {
+    for (int i = 0; i < NSENTENCE; i++) {    	
+    	Vector_t vScore= NULL;
+   	Matrix_t all = NULL;
+    
+	for (int _from = 0; _from <= AVG_SENTENCE_LENGTH; _from++) {
+		for (int _to = 1; _to <= AVG_SENTENCE_LENGTH; _to++)
+			if (_to != _from) {
 
-        float result;
-        
-		debug("***** %d. 400 arc pack is stacked *****", i+1);
-        	
+                   			EPARSE_CHECK_RETURN(hstack(&all, memoryCPU, "all embeddings", v, false, false))
+               		}
+    	}
         ///EPARSE_CHECK_RETURN(score(pkp,v,false,&result))
         
         //log_info("Sentence %d", i);
-        EPARSE_CHECK_RETURN(scoreBatch(pkp, vBatch, false, &vScore))
+        EPARSE_CHECK_RETURN(scoreBatch(pkp, all, false, &vScore))
 		
-		for (int _i = 0; _i < 2; _i++) {
-        	EPARSE_CHECK_RETURN(update(pkp,v,hvidx++,1))
+		for (int _i = 0; _i < 2; _i++)
+        	EPARSE_CHECK_RETURN(update(pkp,v,hvidx++, (i%2 == 0)?1.f:-1.f))
+				
+				/*
+		for (int _i = 0; _i < 2; _i++) 
         	EPARSE_CHECK_RETURN(update(pkp,v,hvidx++,-1))
-        }
+				*/
         
         bool istick = tickProgress(ptested);
         
         if (istick)
         	log_info("%ld hypothesis vectors",((KernelPerceptron_t)pkp->pDeriveObj)->kernel->matrix->nrow);
 
-        check(((KernelPerceptron_t)pkp->pDeriveObj)->kernel->matrix->nrow == hvidx, "Expected number of sv %ld violates the truth %d",((KernelPerceptron_t)pkp->pDeriveObj)->kernel->matrix->nrow, i )
+        check(((KernelPerceptron_t)pkp->pDeriveObj)->kernel->matrix->ncol == hvidx, "Expected number of sv %ld violates the truth %d",((KernelPerceptron_t)pkp->pDeriveObj)->kernel->matrix->ncol, i )
+			
+		
+		long realidx = 0;
+		log_info("Sentence %d",i);
+	    for (int _from = 0; _from <= AVG_SENTENCE_LENGTH; _from++) {
+	           for (int _to = 1; _to <= AVG_SENTENCE_LENGTH; _to++)
+	               if (_to != _from) {
+					   
+			check( EQUAL_WITH_EPSILON( (vScore->data)[realidx], (i%2) * 2 * 121.f,.01f),"Expected %f Actual %f",(i%2) * 2 * 121.f,(vScore->data)[realidx]  )
+						   
+					   realidx++;
+					   
+	               }
+	    }
+
+ 	deleteMatrix(all);
+        deleteVector(vScore);
 
     }
 
