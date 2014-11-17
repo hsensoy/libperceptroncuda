@@ -46,8 +46,8 @@ const char* eparseGetErrorString(eparseError_t status);
 #define EPARSE_CHECK_RETURN(v) {											\
 		eparseError_t stat = v;										\
 		if (stat != eparseSucess) {										\
-			fprintf(stderr, "Error %s at line %d in file %s\n",					\
-					eparseGetErrorString(stat), __LINE__, __FILE__);		\
+			fprintf(stderr, "Error %s(%d) at line %d in file %s\n",					\
+					 eparseGetErrorString(stat), stat,__LINE__, __FILE__);		\
 			exit(1);															\
 		} }
 		
