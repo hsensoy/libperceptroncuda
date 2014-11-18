@@ -21,7 +21,7 @@ SET (${PROJ_NAME}_VERSION_MINOR 1)
 PROJECT(${PROJ_NAME})
 
 FIND_PACKAGE(CUDA REQUIRED)
-SET( CUDA_NVCC_FLAGS "-O3 -DNDEBUG -arch=sm_20" CACHE STRING "nvcc flags" FORCE )
+SET( CUDA_NVCC_FLAGS "-O3 -DNDEBUG -arch=sm_30" CACHE STRING "nvcc flags" FORCE )
 SET( CUDA_VERBOSE_BUILD ON CACHE BOOL "nvcc verbose" FORCE )
 
 
@@ -43,6 +43,7 @@ enable_testing()
 SET ( PROJ_TESTS
 "t1"
 "t2"
+"t2large"
 "t3"
 "tMatrixVectorProductDimMismatch"
 "tMatrixVectorProductwithTranspose"
