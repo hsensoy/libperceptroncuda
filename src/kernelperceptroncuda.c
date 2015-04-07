@@ -162,7 +162,7 @@ eparseError_t scoreBatchKernelPerceptron(KernelPerceptron_t kp, Matrix_t instarr
 	
     check(instarr != NULL, "instarr should be initialized");
     
-    float zero = 0;
+    float zero = 0.f;
 	
 	Matrix_t kernel_matrix = kp->kernel->matrix;
 	
@@ -176,6 +176,7 @@ eparseError_t scoreBatchKernelPerceptron(KernelPerceptron_t kp, Matrix_t instarr
 			
 			long nleft = instarr->ncol;
 			long offset = 0;
+			float zero = 0.f;
 			
 			while(nleft > 0){
 				//log_info("%ld col left", nleft);
@@ -189,7 +190,7 @@ eparseError_t scoreBatchKernelPerceptron(KernelPerceptron_t kp, Matrix_t instarr
 				EPARSE_CHECK_RETURN(powerMatrix(kp->t_yBatch, pkp->power, NULL))
         
         
-		        newInitializedGPUVector(&(kp->t_result), "t_result", MIN(nleft, BATCH_SIZE), matrixInitNone, NULL, NULL)
+		        newInitializedGPUVector(&(kp->t_result), "t_result", MIN(nleft, BATCH_SIZE), matrixInitFixed,&zero, NULL)
 
 
 		        if (avg) 
@@ -201,18 +202,19 @@ eparseError_t scoreBatchKernelPerceptron(KernelPerceptron_t kp, Matrix_t instarr
 				
 				offset +=  MIN(nleft, BATCH_SIZE);
 				nleft -= MIN(nleft, BATCH_SIZE);
-			}
-					
-        } else 
+			}			
+        } 
+		else {
 			return eparseKernelType;
-					
-    }else
+		}
+				
+    }else{
     	newInitializedCPUVector(result, "result", instarr->ncol,  matrixInitFixed, &zero, NULL)
-    
+    }
 
     return eparseSucess;
 
-    error:
+error:
     return eparseMemoryAllocationError;
 }
 

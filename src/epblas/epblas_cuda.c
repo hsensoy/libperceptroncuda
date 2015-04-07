@@ -248,6 +248,7 @@ eparseError_t vstackMatrix(Matrix_t *m1, memoryAllocationDevice_t device,
         		
                 EPARSE_CHECK_RETURN(ensureMatrixCapacity((*m1), (*m1)->n + m2->n))
             } else {
+				log_err( "Column mismatch ");
                 return eparseColumnNumberMissmatch;
 
             }
@@ -339,14 +340,15 @@ eparseError_t hstack(Matrix_t *m1, memoryAllocationDevice_t device, const char* 
 			
 			EPARSE_CHECK_RETURN(newMatrix(m1, device, id, 0, 0))
 						
-			ensureMatrixCapacity(*m1, m2->n);
+			EPARSE_CHECK_RETURN(ensureMatrixCapacity(*m1, m2->n))
 		}else {
 			offset = (*m1)->n;
 
 			if (((*m1)->nrow == m2->nrow && !transposeM2)
 					|| ((*m1)->nrow == m2->ncol && transposeM2) ) {
-				ensureMatrixCapacity((*m1), (*m1)->n + m2->n);
+				EPARSE_CHECK_RETURN(ensureMatrixCapacity((*m1), (*m1)->n + m2->n))
 			} else {
+				log_err("%s(%ldx%ld) %s(%ldx%ld) row numbers mismatch", (*m1)->identifier, (*m1)->nrow,(*m1)->ncol, m2->identifier, m2->nrow,m2->ncol);
 				return eparseColumnNumberMissmatch;
 
 			}
@@ -510,11 +512,13 @@ eparseError_t prodMatrixVector(Matrix_t A, bool tA, Vector_t x, Vector_t y){
 
     if (A->nrow == 0)
         return eparseSucess;
-    else if (!((A->ncol == x->nrow && !tA) || (A->nrow == x->nrow && tA)))
+    else if (!((A->ncol == x->nrow && !tA) || (A->nrow == x->nrow && tA))){
+		log_err("A(%ldx%ld)[%s] x x(%ld) does not conform with y(%ld)", A->nrow,A->ncol, (tA?"tranposed":""),x->nrow,y->nrow);
         return eparseColumnNumberMissmatch;
+	}
     else{
 
-        float alpha = 1., beta = 0.;
+        float alpha = 1.f, beta = 1.f;
 
         check(A->dev == memoryGPU && x->dev ==memoryGPU, "Matrix(A) or Vector(x) is not stored in device memory");
 
@@ -560,7 +564,7 @@ eparseError_t prodMatrixMatrix(Matrix_t A, bool tA, Matrix_t B, Matrix_t C){
     if (A->nrow == 0)
         return eparseSucess;
     else{
-        float alpha = 1., beta = 1.;
+        float alpha = 1.f, beta = 1.f;
 
         check(A->dev == memoryGPU && B->dev ==memoryGPU, "Matrix(A) or Matrix(B) is not stored in device memory");
 
