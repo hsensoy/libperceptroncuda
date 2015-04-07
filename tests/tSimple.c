@@ -62,6 +62,15 @@ void testMatrixVectorProduct() {
 	check((y_host->data)[0] == 30.,"Expected value at index %d was %f where %f found", 0, 30., (y_host->data)[0])
 	check((y_host->data)[1] == 36.,"Expected value at index %d was %f where %f found", 1, 36., (y_host->data)[1])
 	check((y_host->data)[2] == 42.,"Expected value at index %d was %f where %f found", 2, 42., (y_host->data)[2])
+
+	log_info("Retry without transpose...");
+	EPARSE_CHECK_RETURN(prodMatrixVector(A, false, x, y))
+
+	EPARSE_CHECK_RETURN(cloneMatrix(&y_host, memoryCPU, y, "vector y on CPU"))
+
+	check((y_host->data)[0] == 14.,"Expected value at index %d was %f where %f found", 0, 14., (y_host->data)[0])
+	check((y_host->data)[1] == 32.,"Expected value at index %d was %f where %f found", 1, 32., (y_host->data)[1])
+	check((y_host->data)[2] == 50.,"Expected value at index %d was %f where %f found", 2, 51., (y_host->data)[2])
 		
 	log_info("Init with epblas");
 	float one = 2.;
@@ -96,7 +105,7 @@ void testMatrixVectorProduct() {
 	EPARSE_CHECK_RETURN(cloneMatrix(&y_host, memoryCPU, y, "vector y on CPU"))
 		
 	for(int i = 0; i < N; ++i)
-		check((y_host->data)[i] == (float)(N*one*one),"Expected value at index %d was %f where %f found", i, N*one*one*1., (y_host->data)[0])
+		check((y_host->data)[i] == (float)(N*one*one),"Expected value at index %d was %f where %f found", i, N*one*one*1., (y_host->data)[i])
 			
 	
 	exit(EXIT_SUCCESS);
