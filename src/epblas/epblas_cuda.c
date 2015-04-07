@@ -560,7 +560,7 @@ eparseError_t prodMatrixMatrix(Matrix_t A, bool tA, Matrix_t B, Matrix_t C){
     if (A->nrow == 0)
         return eparseSucess;
     else{
-        float alpha = 1., beta = 0.;
+        float alpha = 1., beta = 1.;
 
         check(A->dev == memoryGPU && B->dev ==memoryGPU, "Matrix(A) or Matrix(B) is not stored in device memory");
 
