@@ -5,15 +5,7 @@
 #include "epblas/epblas.h"
 #include "epblas/eputil.h"
 #include "debug.h"
-
-
-struct SimplePerceptron_st{
-
-};
-
-typedef struct SimplePerceptron_st* SimplePerceptron_t;
-
-
+#include "perceptron_common.h"
 
 SimplePerceptron_t __newSimplePerceptron();
 eparseError_t deleteSimplePerceptron(SimplePerceptron_t p);
@@ -27,6 +19,7 @@ eparseError_t recomputeSimplePerceptronAvgWeight(SimplePerceptron_t p);
 eparseError_t dumpSimplePerceptron(FILE *fp, SimplePerceptron_t kp);
 eparseError_t loadSimplePerceptron(FILE *fp, void **kp);
 
+eparseError_t showStatsSimplePerceptron(SimplePerceptron_t kp);
 eparseError_t snapshotBestSimplePerceptron(SimplePerceptron_t sp);
 
 

@@ -26,6 +26,10 @@ const char* eparseGetErrorString(eparseError_t status) {
             return "Index out of bound";
 		case eparseTooLargeCudaOp:
 			return "Operation is beyond the limits of CUDA";
+        case eparseCUDAError:
+            return "CUDA Error: Check CUDA error string for more details.";
+        case eparseMKLError:
+            return  "Intel MKL Error: Check MKL error string for more details.";
         default:
             return "Unknown error";
     }

@@ -76,6 +76,7 @@ eparseError_t newInitializedMatrix(Matrix_t *mptr,
 eparseError_t prodMatrixVector(Matrix_t A, bool tA, Vector_t x, Vector_t y);
 eparseError_t prodMatrixMatrix(Matrix_t A, bool tA, Matrix_t B, Matrix_t C);
 eparseError_t powerMatrix(Matrix_t x, int power, Matrix_t y);
+eparseError_t CosSinMatrix(Matrix_t x, Matrix_t y);
 eparseError_t dot(Vector_t x, Vector_t y, float *result);
 
 

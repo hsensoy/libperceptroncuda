@@ -53,7 +53,12 @@ SET ( PROJ_TESTS
 "tSquareMatrixMatrixProduct"
 "tdotprod"
 "tmatrixvectorprod"
-"tSimple" )
+"tSimple"
+     "tSimplePerceptronwithRBFSampler"
+     "tPerceptronUpdate"
+     "tPerceptronUpdatewithRBFSampler"
+     "tPerceptronBatchScorewithRBFSampler"
+     "tPerceptronBatchScorewithRBFSamplerToyProblem")
 
 foreach( t ${PROJ_TESTS} )
     add_executable( test_${PROJ_NAME}_${t} tests/${t}.c)

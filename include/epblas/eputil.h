@@ -36,7 +36,9 @@ enum eparseError_t {
     eparseKernelPerceptronLoadError,
     eparseKernelPerceptronDumpError,
 	eparseTooLargeCudaOp,
-	eparseNotImplementedYet
+	eparseNotImplementedYet,
+    eparseMKLError,
+    eparseCUDAError
 };
 
 typedef enum eparseError_t eparseError_t;
