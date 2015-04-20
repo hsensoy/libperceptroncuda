@@ -17,13 +17,13 @@ float zero=0.,one=1.,two=2.,three,result;
 void testMatrixVectorProductwithTranspose(){
 
     // Dot product 4
-    newInitializedGPUMatrix(&A, "matrix A", 365, 10000, matrixInitFixed, &two, NULL);
+    newInitializedGPUMatrix(&A, "matrix A", 10000, 365, matrixInitFixed, &two, NULL);
     newInitializedGPUVector(&x, "vector x", 365, matrixInitFixed, &one, NULL);
     newInitializedGPUVector(&y, "vector y", 10000, matrixInitFixed, &zero, NULL);
     newInitializedGPUVector(&ones, "vector 1s", 10000, matrixInitFixed, &one, NULL);
 
     float sum;
-    EPARSE_CHECK_RETURN(prodMatrixVector(A,true, x, y))
+    EPARSE_CHECK_RETURN(prodMatrixVector(A,false, x, y))
 
     EPARSE_CHECK_RETURN(dot(y, ones, &sum))
 

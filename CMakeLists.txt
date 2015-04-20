@@ -4,9 +4,10 @@ cmake_minimum_required(VERSION 2.8.4)
 SET( PROJ_NAME      "perceptroncuda" )
 SET( PROJ_PATH      ${CMAKE_SOURCE_DIR} )
 SET( PROJ_OUT_PATH  ${CMAKE_BINARY_DIR} )
-SET( PROJ_SOURCES   "src/perceptroncuda.c" "src/kernelperceptroncuda.c" "src/simpleperceptroncuda.c" "src/epblas/epcudakernel.cu" "src/epblas/epblas_cuda.c" "src/epblas/epblas_common.c" "src/eputil.c")
-SET( PROJ_HEADERS   "perceptron.h" "kernelperceptron.h"  "simpleperceptron.h" "perceptron_common.h" "epcudakernel.h")
-SET( PROJ_LIBRARIES "-lcurand" )
+FILE( GLOB_RECURSE PROJ_SOURCES "include/*.h" "src/*.c" "src/*.cu") 
+
+#SET( PROJ_HEADERS   "perceptron.h" "kernelperceptron.h"  "simpleperceptron.h" "perceptron_common.h" "epcudakernel.h")
+SET( PROJ_LIBRARIES "m" )
 
 SET( PROJ_INCLUDES  "include" "include/epblas" "/usr/local/include/shared" )
 
@@ -21,7 +22,7 @@ SET (${PROJ_NAME}_VERSION_MINOR 1)
 PROJECT(${PROJ_NAME})
 
 FIND_PACKAGE(CUDA REQUIRED)
-SET( CUDA_NVCC_FLAGS "-O3   -DNDEBUG " CACHE STRING "nvcc flags" FORCE )
+SET( CUDA_NVCC_FLAGS "-O3 -lcurand   -DNDEBUG " CACHE STRING "nvcc flags" FORCE )
 SET( CUDA_VERBOSE_BUILD ON CACHE BOOL "nvcc verbose" FORCE )
 
 
@@ -39,13 +40,16 @@ CUDA_ADD_CUBLAS_TO_TARGET( ${PROJ_NAME} )
 
 enable_testing()
 
+set(DART_TESTING_TIMEOUT "10")
+
 
 SET ( PROJ_TESTS
 "t1"
 "t2"
-"t2large"
+# "t2large"	# Long running
 "t3"
 "tMatrixVectorProductDimMismatch"
+"tMatrixVectorProduct"
 "tMatrixVectorProductwithTranspose"
 "tRectangularMatrixMatrixProduct"
 "tRectangularMatrixMatrixProductTranspose"
@@ -53,12 +57,18 @@ SET ( PROJ_TESTS
 "tSquareMatrixMatrixProduct"
 "tdotprod"
 "tmatrixvectorprod"
-"tSimple" )
+"tSimple"
+     "tSimplePerceptronwithRBFSampler"
+     "tPerceptronUpdate"
+     "tPerceptronUpdatewithRBFSampler"
+     "tPerceptronBatchScorewithRBFSampler"
+     "tPerceptronBatchScorewithRBFSamplerToyProblem")
 
 foreach( t ${PROJ_TESTS} )
     add_executable( test_${PROJ_NAME}_${t} tests/${t}.c)
     target_link_libraries( test_${PROJ_NAME}_${t} "perceptroncuda")
     target_link_libraries( test_${PROJ_NAME}_${t} "/usr/local/lib/shared/libshared.a")
+    target_link_libraries( test_${PROJ_NAME}_${t} "/usr/local/cuda/lib64/libcurand.so")
     add_test( test_${PROJ_NAME}_${t}  ./test_${PROJ_NAME}_${t} )
 endforeach(t)
 

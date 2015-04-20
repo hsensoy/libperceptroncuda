@@ -533,7 +533,7 @@ eparseError_t prodMatrixVector(Matrix_t A, bool tA, Vector_t x, Vector_t y){
             CUDABLAS_CHECK_RETURN(cublasSgemv(handle, CUBLAS_OP_N,
 							                    A->nrow,A->ncol,&alpha,
 							                    A->data,
-							                    A->ncol,x->data,1,&beta,y->data, 1))
+							                    A->nrow,x->data,1,&beta,y->data, 1))
 
 
 
@@ -627,30 +627,31 @@ eparseError_t powerMatrix(Matrix_t x, int power, Matrix_t y){
 	check(y == NULL,"powerMatrix implementation on CUDA is inplace. Set y to NULL and check x for output.")
     
 	EPARSE_CHECK_RETURN( vsPowx(x->n,x->data, power) )
-	/*	
-		Matrix_t x_host = NULL;
-    
-    EPARSE_CHECK_RETURN(cloneMatrix(&x_host, memoryCPU, x, "x host"))
-    
-    for(long i =0;i<x_host->n;i++)
-        (x_host->data)[i] = powf((x_host->data)[i],power);
 
-	//    CUDABLAS_CHECK_RETURN(cublasSetVector(x_host->n, sizeof(float), x_host->data, 1, y->data, 1))
-    
-    
-    
-
-	EPARSE_CHECK_RETURN(matrixDatacpyAnyToAny(x, 0,
-        x_host, 0, sizeof(float) * x->n))
-			
-
-	__deleteMatrix(x_host);
-		*/
 
     return eparseSucess;
 	
 error:
 	return eparseMemoryAllocationError;
+
+}
+
+eparseError_t CosSinMatrix(Matrix_t x, Matrix_t y){
+    if( !(2 * x->nrow == y->nrow && x->ncol == y->ncol)){
+        log_err( "x(%ldx%ld) and y(%ldx%ld) does not conform", x->nrow,x->ncol, y->nrow, y->ncol);
+        return eparseColumnNumberMissmatch;
+    }
+
+    check(x->dev == memoryGPU, "Matrix(x) should be on GPU memory");
+    check(y->dev == memoryGPU, "Matrix(y) should be on GPU memory");
+
+    EPARSE_CHECK_RETURN(vsCosSinMatrix(x->nrow,x->ncol, x->data,y->data))
+
+
+    return eparseSucess;
+
+error:
+    return eparseMemoryAllocationError;
 
 }
 

@@ -13,7 +13,6 @@ enum BudgetMethod{
 typedef enum BudgetMethod BudgetMethod;
 
 
-
 enum PerceptronType{
     SIMPLE_PERCEPTRON,
     KERNEL_PERCEPTRON
@@ -50,18 +49,18 @@ struct KernelPerceptron_st{
     Kernel_t best_kernel;
 
     void *pDerivedObj;
-    
-    
+
+
     // Object below are temporary structures used at intermediate steps of computation.
     Matrix_t t_instBatch;
     Matrix_t t_yBatch;
-	Matrix_t t_yPowerBatch;
-	Vector_t t_result;
+    Matrix_t t_yPowerBatch;
+    Vector_t t_result;
 
-	Vector_t t_inst;
-	Vector_t t_y ;
-	Vector_t t_yPower ;
- 	
+    Vector_t t_inst;
+    Vector_t t_y;
+    Vector_t t_yPower;
+
 };
 
 typedef struct KernelPerceptron_st* KernelPerceptron_t;
@@ -74,6 +73,17 @@ struct PolynomialKernelPerceptron_st {
 typedef struct PolynomialKernelPerceptron_st* PolynomialKernelPerceptron_t;
 
 
+struct SimplePerceptron_st {
+    int c;
+    int best_numit;
+
+    Vector_t w;
+    Vector_t w_avg;
+    Vector_t best_w;
+    Vector_t w_beta;
+};
+
+typedef struct SimplePerceptron_st* SimplePerceptron_t;
 
 
 #endif
