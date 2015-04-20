@@ -4,7 +4,7 @@
 #include "featuretransform.h"
 #include "debug.h"
 
-#define NSENTENCE 10000
+#define NSENTENCE 100
 #define AVG_SENTENCE_LENGTH 20
 #define XFORMED_EMBEDDING_LENGTH 365
 
@@ -45,12 +45,12 @@ void succesiveUpdatandScore() {
         //log_info("Sentence %d", i);
         for (int j = 0; j < AVG_SENTENCE_LENGTH * AVG_SENTENCE_LENGTH; j++) {
 
-            //log_info("Transforming raw input");
+//            log_info("Transforming raw input");
             EPARSE_CHECK_RETURN(transform(ft,v,&v_nl))
 
 
 
-            //log_info("Scoring transformed input");
+//            log_info("Scoring transformed input");
             EPARSE_CHECK_RETURN(score(pkp, v_nl, false, &vScore))
 
             check(vScore == 0, "vscore is expected to be 0.0 where found %f",vScore);

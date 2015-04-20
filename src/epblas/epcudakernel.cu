@@ -37,7 +37,9 @@ __global__ void _g_vsSin(long n, float *a, float *b) {
 
 
 eparseError_t vsScale(long n,float *x,float scaler) {
-    _g_vsScale <<< 4096, 256 >>> (n, x, scaler);
+    _g_vsScale <<< 4096, 256 >>> (n, scaler,x);
+
+    return eparseSucess;
 }
 
 eparseError_t vsPowx(long n, float *a, float b) {
@@ -53,8 +55,8 @@ eparseError_t vsPowx(long n, float *a, float b) {
 eparseError_t vsCosSinMatrix(long nrow, long ncol, float *x, float *y) {
 
     for (int i = 0; i < nrow * ncol; i += nrow) {
-        _g_vsCos <<< 4096, 256 >>> (nrow, x, x + i, y + 2 * i);
-        _g_vsSin <<< 4096, 256 >>> (nrow, x, x + i, y + 2 * i + nrow);
+        _g_vsCos <<< 4096, 256 >>> (nrow, x + i, y + 2 * i);
+        _g_vsSin <<< 4096, 256 >>> (nrow, x + i, y + 2 * i + nrow);
     }
 
     return eparseSucess;
@@ -70,9 +72,11 @@ __global__ void _g_saxpy(long n, float change, float *a, float *b) {
     }
 }
 
-eparseError_t cuda_saxpy(long n, float change, float *x, long x_idx, float *y, long y_idx);{
+eparseError_t cuda_saxpy(long n, float change, float *x, long x_idx, float *y, long y_idx){
 
     _g_saxpy<<< 4096, 256 >>> (n,change,x,y);
+    
+    return eparseSucess;
 }
 
 

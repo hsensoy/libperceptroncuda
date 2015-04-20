@@ -73,21 +73,22 @@ eparseError_t scoreBatchSimplePerceptron(SimplePerceptron_t kp, Matrix_t instarr
     float zero = 0.f;
 
 
-    newInitializedCPUVector(result, "result", instarr->ncol, matrixInitNone, NULL, NULL)
-
     if (avg) {
         if (kp->w_avg == NULL) {
             newInitializedCPUVector(result, "result", instarr->ncol, matrixInitFixed, &zero, NULL)
         }
         else {
             Matrix_t instarr_d = NULL;
+	    Vector_t result_d = NULL;
 
             EPARSE_CHECK_RETURN(cloneMatrix(&instarr_d, memoryGPU, instarr, "device matrix"))
+            newInitializedGPUVector(&result_d, "result", instarr->ncol, matrixInitFixed, &zero, NULL)
 
-
-            EPARSE_CHECK_RETURN(prodMatrixVector(instarr_d, true, kp->w_avg, *result))
+            EPARSE_CHECK_RETURN(prodMatrixVector(instarr_d, true, kp->w_avg, result_d))
+            EPARSE_CHECK_RETURN(cloneMatrix(result, memoryCPU, result_d, "result on CPU"))
 
             deleteMatrix(instarr_d);
+	    deleteVector(result_d);
         }
     } else {
         if (kp->w == NULL) {
@@ -97,12 +98,16 @@ eparseError_t scoreBatchSimplePerceptron(SimplePerceptron_t kp, Matrix_t instarr
         }
         else {
             Matrix_t instarr_d = NULL;
+	    Vector_t result_d = NULL;
 
             EPARSE_CHECK_RETURN(cloneMatrix(&instarr_d, memoryGPU, instarr, "device matrix"))
+            newInitializedGPUVector(&result_d, "result", instarr->ncol, matrixInitFixed, &zero, NULL)
 
-            EPARSE_CHECK_RETURN(prodMatrixVector(instarr_d, true, kp->w, *result))
+            EPARSE_CHECK_RETURN(prodMatrixVector(instarr_d, true, kp->w, result_d))
+            EPARSE_CHECK_RETURN(cloneMatrix(result, memoryCPU, result_d, "result on CPU"))
 
             deleteMatrix(instarr_d);
+	    deleteVector(result_d);
         }
     }
 
@@ -124,12 +129,11 @@ eparseError_t updateSimplePerceptron(SimplePerceptron_t kp, Vector_t sv, long sv
     }
 
     if (sv->dev == memoryGPU) {
-
         cuda_saxpy(sv->n, change, sv->data, 1, kp->w->data, 1);
         cuda_saxpy(sv->n, change * kp->c, sv->data, 1, kp->w_beta->data, 1);
     } else {
         Vector_t sv_d = NULL;
-        EPARSE_CHECK_RETURN(cloneVector(&sv_d, memoryGPU, inst, "device sv"));
+        EPARSE_CHECK_RETURN(cloneVector(&sv_d, memoryGPU, sv, "device sv"));
 
         cuda_saxpy(sv->n, change, sv_d->data, 1, kp->w->data, 1);
         cuda_saxpy(sv->n, change * kp->c, sv_d->data, 1, kp->w_beta->data, 1);

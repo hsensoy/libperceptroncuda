@@ -24,22 +24,23 @@ void succesiveUpdatandScore() {
     
     newInitializedCPUVector(&v, "vector", XFORMED_EMBEDDING_LENGTH, matrixInitFixed, &somevalue, NULL);
 
-    log_info("Allocation is done");
+    	log_info("Allocation is done");
 	Progress_t ptested = NULL;
 	EPARSE_CHECK_RETURN(newProgress(&ptested, "test sentences", NSENTENCE, 0.1))
 		
 	int hvidx = 0;
-    for (int i = 0; i < NSENTENCE; i++) {    	
-    	Vector_t vScore= NULL;
-   	Matrix_t all = NULL;
+    	for (int i = 0; i < NSENTENCE; i++) {    	
+    		Vector_t vScore= NULL;
+   		Matrix_t all = NULL;
     
-	for (int _from = 0; _from <= AVG_SENTENCE_LENGTH; _from++) {
-		for (int _to = 1; _to <= AVG_SENTENCE_LENGTH; _to++)
-			if (_to != _from) {
-
+		for (int _from = 0; _from <= AVG_SENTENCE_LENGTH; _from++) {
+			for (int _to = 1; _to <= AVG_SENTENCE_LENGTH; _to++)
+				if (_to != _from) {
                    			EPARSE_CHECK_RETURN(hstack(&all, memoryCPU, "all embeddings", v, false, false))
-               		}
-    	}
+               			}
+    		}
+
+		log_info("all matrix is %ldx%ld",all->nrow,all->ncol);
         ///EPARSE_CHECK_RETURN(score(pkp,v,false,&result))
         
         //log_info("Sentence %d", i);

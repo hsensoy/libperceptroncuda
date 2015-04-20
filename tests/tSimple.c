@@ -24,7 +24,7 @@ void testMatrixVectorProduct() {
     // Dot product 1
 //    newInitializedGPUMatrix(&A, "matrix A", 2, 2, matrixInitNone, NULL, NULL);
 //    newInitializedGPUVector(&x, "vector x", 2, matrixInitNone, NULL, NULL);
-    newInitializedGPUVector(&y, "vector y", 3, matrixInitNone, NULL, NULL);
+    newInitializedGPUVector(&y, "vector y", 3, matrixInitFixed, &zero, NULL);
 	
 	
 	newInitializedCPUMatrix(&A_host, "matrix A on host", 3, 3, matrixInitNone, NULL, NULL);	
@@ -52,9 +52,10 @@ void testMatrixVectorProduct() {
 		
 	check((y_host->data)[0] == 14.,"Expected value at index %d was %f where %f found", 0, 14., (y_host->data)[0])
 	check((y_host->data)[1] == 32.,"Expected value at index %d was %f where %f found", 1, 32., (y_host->data)[1])
-	check((y_host->data)[2] == 50.,"Expected value at index %d was %f where %f found", 2, 51., (y_host->data)[2])
+	check((y_host->data)[2] == 50.,"Expected value at index %d was %f where %f found", 2, 50., (y_host->data)[2])
 		
 	log_info("Try with transpose");
+    	newInitializedGPUVector(&y, "vector y", 3, matrixInitFixed, &zero, NULL);
 	EPARSE_CHECK_RETURN(prodMatrixVector(A, true, x, y))
 	
 	EPARSE_CHECK_RETURN(cloneMatrix(&y_host, memoryCPU, y, "vector y on CPU"))
@@ -64,6 +65,7 @@ void testMatrixVectorProduct() {
 	check((y_host->data)[2] == 42.,"Expected value at index %d was %f where %f found", 2, 42., (y_host->data)[2])
 
 	log_info("Retry without transpose...");
+    	newInitializedGPUVector(&y, "vector y", 3, matrixInitFixed, &zero, NULL);
 	EPARSE_CHECK_RETURN(prodMatrixVector(A, false, x, y))
 
 	EPARSE_CHECK_RETURN(cloneMatrix(&y_host, memoryCPU, y, "vector y on CPU"))
@@ -89,7 +91,7 @@ void testMatrixVectorProduct() {
 		*/
 	
     newInitializedGPUVector(&x, "vector x", N, matrixInitFixed, &one, NULL);
-	newInitializedGPUVector(&y, "vector y", N, matrixInitNone, NULL, NULL);
+	newInitializedGPUVector(&y, "vector y", N, matrixInitFixed, &zero, NULL);
 	
 	newInitializedGPUMatrix(&A, "matrix A", N, N, matrixInitFixed, &one, NULL);	
 	

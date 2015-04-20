@@ -60,10 +60,6 @@ void succesiveUpdatandScore() {
     printMatrix("trigo-transformed",vBatch_nl,stdout);
 
 
-    cblas_sscal(vBatch_nl->n,((RBFSampler_t)ft->pDeriveObj)->scaler ,vBatch_nl->data, 1);
-
-    printMatrix("transformed",vBatch_nl,stdout);
-
     EPARSE_CHECK_RETURN(transformBatch(ft,vBatch,&vBatch_nl))
 
     printMatrix("transformed",vBatch_nl,stdout);

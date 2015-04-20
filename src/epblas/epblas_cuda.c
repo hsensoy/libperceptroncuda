@@ -533,7 +533,7 @@ eparseError_t prodMatrixVector(Matrix_t A, bool tA, Vector_t x, Vector_t y){
             CUDABLAS_CHECK_RETURN(cublasSgemv(handle, CUBLAS_OP_N,
 							                    A->nrow,A->ncol,&alpha,
 							                    A->data,
-							                    A->ncol,x->data,1,&beta,y->data, 1))
+							                    A->nrow,x->data,1,&beta,y->data, 1))
 
 
 

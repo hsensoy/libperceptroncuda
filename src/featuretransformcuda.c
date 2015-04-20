@@ -67,10 +67,10 @@ static eparseError_t __initRBFSampler(RBFSampler_t pSt, long d) {
 
         curandStatus_t status = curandGenerateNormal(gen,pSt->samples->data, pSt->nsample * d, 0.0, pSt->sigma);
 
-        if (status != cudaSuccess){
-            log_info("Error in MKL random number generation %d", status);
+        if (status != CURAND_STATUS_SUCCESS){
+            log_info("Error in CUDA random number generation %d", status);
 
-            return eparseCudaError;
+            return eparseCUDAError;
         }
 
         curandDestroyGenerator(gen);
@@ -96,10 +96,14 @@ eparseError_t deleteFeatureTransformer(FeatureTransformer_t ft){
 
 eparseError_t transform(FeatureTransformer_t ft, Vector_t in, Vector_t *out){
     RBFSampler_t rbf = NULL;
+    float zero = 0.f;
+
+
     switch(ft->type){
         case KERNAPROX_RBF_SAMPLER:
 
             rbf = (RBFSampler_t)ft->pDeriveObj;
+    	    newInitializedGPUVector(&(rbf->partial_inst), "transformed partial", rbf->nsample,matrixInitFixed,&zero,NULL)
 
             EPARSE_CHECK_RETURN(__initRBFSampler(rbf, in->n)    )
 
@@ -109,19 +113,19 @@ eparseError_t transform(FeatureTransformer_t ft, Vector_t in, Vector_t *out){
             else{
                 Vector_t in_dev = NULL;
 
-                EPARSE_CHECK_RETURN(cloneVector(&in_dev, memoryGPU, in))
+                EPARSE_CHECK_RETURN(cloneVector(&in_dev, memoryGPU, in,"input on device"))
 
                 EPARSE_CHECK_RETURN(prodMatrixVector(rbf->samples,false,in_dev , rbf->partial_inst));
 
                 deleteVector(in_dev);
             }
 
-            if( (*out)->dev == memoryGPU ) {
+            if( (*out) != NULL && (*out)->dev == memoryGPU ) {
                 newInitializedGPUVector(out, "transformed", 2 * rbf->nsample, matrixInitNone, NULL, NULL)
 
                 EPARSE_CHECK_RETURN(CosSinMatrix(rbf->partial_inst, *out));
 
-                EPARSE_CHECK_RETURN(vsScale((*out)->n ,(*out)->data),rbf->scaler))
+                EPARSE_CHECK_RETURN(vsScale((*out)->n ,(*out)->data,rbf->scaler))
 
             }else{
                 Vector_t out_dev = NULL;
@@ -160,6 +164,7 @@ eparseError_t transform(FeatureTransformer_t ft, Vector_t in, Vector_t *out){
 
 eparseError_t transformBatch(FeatureTransformer_t ft, Matrix_t in, Matrix_t *out){
     RBFSampler_t rbf = NULL;
+    float zero = 0.f;
     switch(ft->type){
         case KERNAPROX_RBF_SAMPLER:
 
@@ -167,7 +172,8 @@ eparseError_t transformBatch(FeatureTransformer_t ft, Matrix_t in, Matrix_t *out
 
             EPARSE_CHECK_RETURN(__initRBFSampler(rbf, in->nrow)    )
 
-            newInitializedMatrix(&(rbf->partial_matrix),memoryGPU,"Partial Matrix",rbf->nsample, in->ncol, matrixInitNone,NULL,NULL);
+
+            newInitializedMatrix(&(rbf->partial_matrix),memoryGPU,"Partial Matrix",rbf->nsample, in->ncol, matrixInitFixed,&zero,NULL);
 
             if ( in->dev == memoryGPU) {
                 EPARSE_CHECK_RETURN(prodMatrixMatrix(rbf->samples,false,in , rbf->partial_matrix));
@@ -175,7 +181,7 @@ eparseError_t transformBatch(FeatureTransformer_t ft, Matrix_t in, Matrix_t *out
             else{
                 Matrix_t in_dev = NULL;
 
-                EPARSE_CHECK_RETURN(cloneMatrix(&in_dev, memoryGPU, in))
+                EPARSE_CHECK_RETURN(cloneMatrix(&in_dev, memoryGPU, in, "input matrix on device"))
 
                 EPARSE_CHECK_RETURN(prodMatrixMatrix(rbf->samples,false,in_dev , rbf->partial_matrix));
 
@@ -183,12 +189,12 @@ eparseError_t transformBatch(FeatureTransformer_t ft, Matrix_t in, Matrix_t *out
 
             }
 
-            if( (*out)->dev == memoryGPU ) {
+            if( (*out) != NULL && (*out)->dev == memoryGPU ) {
                 newInitializedMatrix(out,memoryGPU,"Transformed Matrix",2 * rbf->nsample, in->ncol, matrixInitNone,NULL,NULL);
 
                 EPARSE_CHECK_RETURN(CosSinMatrix(rbf->partial_matrix,*out))
 
-                EPARSE_CHECK_RETURN(vsScale((*out)->n ,(*out)->data),rbf->scaler)
+                EPARSE_CHECK_RETURN(vsScale((*out)->n ,(*out)->data,rbf->scaler))
 
             }else{
                 Vector_t out_dev = NULL;
@@ -199,9 +205,7 @@ eparseError_t transformBatch(FeatureTransformer_t ft, Matrix_t in, Matrix_t *out
 
                 EPARSE_CHECK_RETURN(vsScale(out_dev->n ,out_dev->data, rbf->scaler))
 
-                EPARSE_CHECK_RETURN(newInitializedCPUMatrix(out, "transformed", 2 * rbf->nsample, in->ncol, matrixInitNone, NULL, NULL))
-
-                EPARSE_CHECK_RETURN(matrixDatacpyAnyToAny(*out,0,out_dev,0,out_dev->n * sizeof(float)))
+		EPARSE_CHECK_RETURN(cloneMatrix(out, memoryCPU, out_dev, "result in CPU"))
 
                 deleteVector(out_dev);
 

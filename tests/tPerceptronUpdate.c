@@ -3,7 +3,7 @@
 #include "perceptron.h"
 #include "debug.h"
 
-#define NSENTENCE 10000
+#define NSENTENCE 40
 #define AVG_SENTENCE_LENGTH 20
 #define XFORMED_EMBEDDING_LENGTH 720
 
