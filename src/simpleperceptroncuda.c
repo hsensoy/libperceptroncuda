@@ -147,11 +147,19 @@ eparseError_t recomputeSimplePerceptronAvgWeight(SimplePerceptron_t p) {
     
     EPARSE_CHECK_RETURN(cloneVector(&(p->w_avg), memoryGPU, p->w, "w-avg clone of w"))
     
-    EPARSE_CHECK_RETURN(cuda_saxpy( p->w->n, -1./(kp->c), p->w_beta->data,1,p->w_avg->data,1 ))
+    EPARSE_CHECK_RETURN(cuda_saxpy( p->w->n, -1./(p->c), p->w_beta->data,1,p->w_avg->data,1 ))
     
     return eparseSucess;
 }
 
 eparseError_t snapshotBestSimplePerceptron(SimplePerceptron_t sp) {
-    return eparseColumnNumberMissmatch;
+    debug("Best model snapshot started");
+
+    EPARSE_CHECK_RETURN(cloneMatrix(&(sp->best_w), memoryCPU, sp->w_avg, "Best w-avg"))
+
+    sp->best_numit = 0; //TODO: Fix it
+
+    debug("Best model snapshot completed");
+
+    return eparseSucess;
 }
