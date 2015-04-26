@@ -192,7 +192,7 @@ eparseError_t transformBatch(FeatureTransformer_t ft, Matrix_t in, Matrix_t *out
                 
                 newInitializedMatrix(&(rbf->partial_matrix), memoryGPU, "partial matrix",rbf->nsample, MIN(nleft, TRANSFORM_BATCH_SIZE), matrixInitFixed, &zero, NULL)
                 
-                EPARSE_CHECK_RETURN(prodMatrixMatrix(rbf->samples,false,rbf->in_cache , rbf->partial_matrix));
+                EPARSE_CHECK_RETURN(prodMatrixMatrix(rbf->samples,false,rbf->in_cache , rbf->partial_matrix))
                 
 
                 newInitializedMatrix(&(rbf->out_dev),memoryGPU,"Transformed Matrix on Device",2 * rbf->nsample, MIN(nleft, TRANSFORM_BATCH_SIZE), matrixInitNone,NULL,NULL);
@@ -202,10 +202,10 @@ eparseError_t transformBatch(FeatureTransformer_t ft, Matrix_t in, Matrix_t *out
                 EPARSE_CHECK_RETURN(vsScale(rbf->out_dev->n ,rbf->out_dev->data, rbf->scaler))
                 
                 
-                EPARSE_CHECK_RETURN(matrixDatacpyAnyToAny(*result, offset, rbf->out_dev, 0,  2 * rbf->nsample * MIN(nleft, TRANSFORM_BATCH_SIZE) * sizeof(float)));
+                EPARSE_CHECK_RETURN(matrixDatacpyAnyToAny(*result, offset, rbf->out_dev, 0,  2 * rbf->nsample * MIN(nleft, TRANSFORM_BATCH_SIZE) * sizeof(float)))
                 
-                offset +=  MIN(nleft, BATCH_SIZE);
-                nleft -= MIN(nleft, BATCH_SIZE);
+                offset +=  MIN(nleft, TRANSFORM_BATCH_SIZE);
+                nleft -= MIN(nleft, TRANSFORM_BATCH_SIZE);
             }
                 
             break;
