@@ -39,8 +39,7 @@ __global__ void _g_vsCosSin(long n, float *a, float *b) {
     for (long i = blockIdx.x * blockDim.x + threadIdx.x;
          i < n;
          i += blockDim.x * gridDim.x) {
-        b[i] = cosf(a[i]);
-        b[i+n] = sinf(a[i]);
+        sincosf(a[i],&(b[i+n]),&(b[i]))
     }
 }
 
