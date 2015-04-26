@@ -63,6 +63,9 @@ eparseError_t vsPowx(long n, float *a, float b) {
 
 eparseError_t vsCosSinMatrix(long nrow, long ncol, float *x, float *y) {
 
+    /**
+        todo: This loop can simply be removed and fully vectorized.
+    */
     for (int i = 0; i < nrow * ncol; i += nrow) {
         //_g_vsCos <<< 4096, 256 >>> (nrow, x + i, y + 2 * i);
         //_g_vsSin <<< 4096, 256 >>> (nrow, x + i, y + 2 * i + nrow);
