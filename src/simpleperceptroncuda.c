@@ -1,6 +1,7 @@
 #include "simpleperceptron.h"
 #include "epcudakernel.h"
 
+#define BATCH_SIZE 900	//Given that majority of the sentences are shorter than 30 words.
 
 eparseError_t deleteSimplePerceptron(SimplePerceptron_t sp) {
     deleteVector(sp->best_w);
@@ -67,50 +68,43 @@ eparseError_t scoreSimplePerceptron(SimplePerceptron_t kp, Vector_t inst, bool a
             }
         }
     }
+    
+    return eparseSucess;
 }
 
 eparseError_t scoreBatchSimplePerceptron(SimplePerceptron_t kp, Matrix_t instarr, bool avg, Vector_t *result) {
     float zero = 0.f;
-
-
-    if (avg) {
-        if (kp->w_avg == NULL) {
-            newInitializedCPUVector(result, "result", instarr->ncol, matrixInitFixed, &zero, NULL)
+    
+    Vector_t weight = avg ? (kp->w_avg) : (kp->w);
+    
+    if ( weight != NULL){
+        Matrix_t instarr_d = NULL;
+        Vector_t result_d = NULL;
+        
+        newInitializedCPUVector(result, "result on cpu",instarr->ncol, matrixInitNone, NULL, NULL)
+        long nleft = instarr->ncol;
+        long offset = 0;
+        
+        while (nleft > 0) {
+            EPARSE_CHECK_RETURN(mtrxcolcpy(&( instarr_d ), memoryGPU, instarr, "instarr GPU batch", offset, MIN(nleft, BATCH_SIZE)))
+            
+            newInitializedGPUVector(&result_d, "result", MIN(nleft, BATCH_SIZE), matrixInitFixed, &zero, NULL)
+            
+            EPARSE_CHECK_RETURN(prodMatrixVector(instarr_d, true, weight, result_d))
+            
+            EPARSE_CHECK_RETURN(matrixDatacpyAnyToAny(*result, offset, result_d, 0,  MIN(nleft, BATCH_SIZE) * sizeof(float)));
+            
+            offset +=  MIN(nleft, BATCH_SIZE);
+            nleft -= MIN(nleft, BATCH_SIZE);
         }
-        else {
-            Matrix_t instarr_d = NULL;
-	    Vector_t result_d = NULL;
 
-            EPARSE_CHECK_RETURN(cloneMatrix(&instarr_d, memoryGPU, instarr, "device matrix"))
-            newInitializedGPUVector(&result_d, "result", instarr->ncol, matrixInitFixed, &zero, NULL)
-
-            EPARSE_CHECK_RETURN(prodMatrixVector(instarr_d, true, kp->w_avg, result_d))
-            EPARSE_CHECK_RETURN(cloneMatrix(result, memoryCPU, result_d, "result on CPU"))
-
-            deleteMatrix(instarr_d);
-	    deleteVector(result_d);
-        }
-    } else {
-        if (kp->w == NULL) {
-
-            newInitializedCPUVector(result, "result", instarr->ncol, matrixInitFixed, &zero, NULL)
-
-        }
-        else {
-            Matrix_t instarr_d = NULL;
-	    Vector_t result_d = NULL;
-
-            EPARSE_CHECK_RETURN(cloneMatrix(&instarr_d, memoryGPU, instarr, "device matrix"))
-            newInitializedGPUVector(&result_d, "result", instarr->ncol, matrixInitFixed, &zero, NULL)
-
-            EPARSE_CHECK_RETURN(prodMatrixVector(instarr_d, true, kp->w, result_d))
-            EPARSE_CHECK_RETURN(cloneMatrix(result, memoryCPU, result_d, "result on CPU"))
-
-            deleteMatrix(instarr_d);
-	    deleteVector(result_d);
-        }
+        deleteMatrix(instarr_d);
+        deleteVector(result_d);
+        
+    }else {
+        newInitializedCPUVector(result, "result", instarr->ncol, matrixInitFixed, &zero, NULL)
     }
-
+    
     return eparseSucess;
 }
 
