@@ -171,13 +171,7 @@ eparseError_t transformBatch(FeatureTransformer_t ft, Matrix_t in, Matrix_t *out
     debug("transformBatch is called");
     
     check(   (*out) == NULL ||  (*out)->dev != memoryGPU, "out Matrix can only be allocated on CPU memory.");
-    /**
-        Size of out is (2*rbf->sample, in->col)
-        For example:
-            For a sentence of length 100 words, there are 10.000 arcs
-                In return there will be 400.000.000 elements with 1.6 GB CUDA memory requirement (this will be more than 2 GB with GROWTH parameter)
-    */
-    EPARSE_CHECK_RETURN(newInitializedMatrix(out, memoryCPU, "Transformed Matrix on CPU", 2 * rbf->nsample, in->ncol, matrixInitNone,NULL,NULL))
+    
     
     switch(ft->type){
         case KERNAPROX_RBF_SAMPLER:
@@ -185,6 +179,14 @@ eparseError_t transformBatch(FeatureTransformer_t ft, Matrix_t in, Matrix_t *out
             rbf = (RBFSampler_t)ft->pDeriveObj;
 
             EPARSE_CHECK_RETURN(__initRBFSampler(rbf, in->nrow)    )
+            
+            /**
+                Size of out is (2*rbf->sample, in->col)
+                For example:
+                    For a sentence of length 100 words, there are 10.000 arcs
+                        In return there will be 400.000.000 elements with 1.6 GB CUDA memory requirement (this will be more than 2 GB with GROWTH parameter)
+            */
+            EPARSE_CHECK_RETURN(newInitializedMatrix(out, memoryCPU, "Transformed Matrix on CPU", 2 * rbf->nsample, in->ncol, matrixInitNone,NULL,NULL))
             
             long nleft = in->ncol;
             long offset = 0;
