@@ -35,6 +35,15 @@ __global__ void _g_vsSin(long n, float *a, float *b) {
     }
 }
 
+__global__ void _g_vsCosSin(long n, float *a, float *b) {
+    for (long i = blockIdx.x * blockDim.x + threadIdx.x;
+         i < n;
+         i += blockDim.x * gridDim.x) {
+        b[i] = cosf(a[i]);
+        b[i+n] = sinf(a[i]);
+    }
+}
+
 
 eparseError_t vsScale(long n,float *x,float scaler) {
     _g_vsScale <<< 4096, 256 >>> (n, scaler,x);
@@ -55,8 +64,9 @@ eparseError_t vsPowx(long n, float *a, float b) {
 eparseError_t vsCosSinMatrix(long nrow, long ncol, float *x, float *y) {
 
     for (int i = 0; i < nrow * ncol; i += nrow) {
-        _g_vsCos <<< 4096, 256 >>> (nrow, x + i, y + 2 * i);
-        _g_vsSin <<< 4096, 256 >>> (nrow, x + i, y + 2 * i + nrow);
+        //_g_vsCos <<< 4096, 256 >>> (nrow, x + i, y + 2 * i);
+        //_g_vsSin <<< 4096, 256 >>> (nrow, x + i, y + 2 * i + nrow);
+         _g_vsCosSin <<< 4096, 256 >>> (nrow, x + i, y + 2 * i);
     }
 
     return eparseSucess;

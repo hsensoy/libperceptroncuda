@@ -81,8 +81,6 @@ eparseError_t scoreBatchSimplePerceptron(SimplePerceptron_t kp, Matrix_t instarr
     Vector_t weight = avg ? (kp->w_avg) : (kp->w);
     
     if ( weight != NULL){
-        Matrix_t instarr_d = NULL;
-        Vector_t result_d = NULL;
         
         newInitializedCPUVector(result, "result on cpu",instarr->ncol, matrixInitNone, NULL, NULL)
         long nleft = instarr->ncol;
