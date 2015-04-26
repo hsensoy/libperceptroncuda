@@ -190,7 +190,7 @@ eparseError_t transformBatch(FeatureTransformer_t ft, Matrix_t in, Matrix_t *out
             while (nleft > 0) {
                 EPARSE_CHECK_RETURN(mtrxcolcpy(&( rbf->in_cache ), memoryGPU, in, "in GPU batch", offset, MIN(nleft, TRANSFORM_BATCH_SIZE)))
                 
-                newInitializedMatrix(&(rbf->partial_matrix), "partial matrix",rbf->nsample, MIN(nleft, TRANSFORM_BATCH_SIZE), matrixInitFixed, &zero, NULL)
+                newInitializedMatrix(&(rbf->partial_matrix), memoryGPU, "partial matrix",rbf->nsample, MIN(nleft, TRANSFORM_BATCH_SIZE), matrixInitFixed, &zero, NULL)
                 
                 EPARSE_CHECK_RETURN(prodMatrixMatrix(rbf->samples,false,rbf->in_cache , rbf->partial_matrix));
                 
