@@ -202,7 +202,7 @@ eparseError_t transformBatch(FeatureTransformer_t ft, Matrix_t in, Matrix_t *out
                 EPARSE_CHECK_RETURN(vsScale(rbf->out_dev->n ,rbf->out_dev->data, rbf->scaler))
                 
                 
-                EPARSE_CHECK_RETURN(matrixDatacpyAnyToAny(*result, offset, rbf->out_dev, 0,  2 * rbf->nsample * MIN(nleft, TRANSFORM_BATCH_SIZE) * sizeof(float)))
+                EPARSE_CHECK_RETURN(matrixDatacpyAnyToAny(out, offset, rbf->out_dev, 0,  2 * rbf->nsample * MIN(nleft, TRANSFORM_BATCH_SIZE) * sizeof(float)))
                 
                 offset +=  MIN(nleft, TRANSFORM_BATCH_SIZE);
                 nleft -= MIN(nleft, TRANSFORM_BATCH_SIZE);
