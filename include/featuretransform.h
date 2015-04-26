@@ -9,6 +9,8 @@
 #include "epblas/epblas.h"
 #include <math.h>
 
+#define TRANSFORM_BATCH_SIZE 1600
+
 
 enum FeatureTransform {
     KERNAPROX_NONE,
@@ -46,7 +48,10 @@ struct RBFSampler_st {
 
 
     Vector_t partial_inst;
+    
+    Matrix_t in_cache;
     Matrix_t partial_matrix;
+    Matrix_t out_dev;
 
 };
 
