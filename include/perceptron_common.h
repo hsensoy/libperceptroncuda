@@ -81,6 +81,12 @@ struct SimplePerceptron_st {
     Vector_t w_avg;
     Vector_t best_w;
     Vector_t w_beta;
+    
+    // Intermediate objects to reduce malloc/free overhead (especially on CUDA)
+    Vector_t sv_d;    
+    Matrix_t instarr_d;
+    Vector_t result_d;
+    
 };
 
 typedef struct SimplePerceptron_st* SimplePerceptron_t;
