@@ -2,7 +2,7 @@
 #include "epcudakernel.h"
 
 
-#define BATCH_SIZE 2500 //For simple perceptron we have more space to be used at CUDA hardware
+#define BATCH_SIZE 5000 //For simple perceptron we have more space to be used at CUDA hardware
 
 eparseError_t deleteSimplePerceptron(SimplePerceptron_t sp) {
     deleteVector(sp->best_w);

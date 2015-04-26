@@ -9,7 +9,7 @@
 #include "epblas/epblas.h"
 #include <math.h>
 
-#define TRANSFORM_BATCH_SIZE 2500
+#define TRANSFORM_BATCH_SIZE 5000
 
 
 enum FeatureTransform {
