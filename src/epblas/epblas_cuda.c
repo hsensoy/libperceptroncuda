@@ -94,7 +94,7 @@ eparseError_t ensureMatrixCapacity(Matrix_t mptr, long nrequired) {
                     size_t freemem, totalmem;
                     CUDA_CHECK_RETURN(cudaMemGetInfo(&freemem, &totalmem))
 
-                    if (freemem > sizeof(float) * newCapacity * 1.2) {
+                    if (freemem > sizeof(float) * newCapacity * GPU_MEMORY_GROWTH_RATE ) {
                         CUDA_CHECK_RETURN(
                                 cudaMalloc((void** )&(newPtr),
                                         sizeof(float) * newCapacity))

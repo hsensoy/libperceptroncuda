@@ -2,6 +2,8 @@
 #include "epcudakernel.h"
 
 
+#define BATCH_SIZE 8000 //For simple perceptron we have more space to be used at CUDA hardware
+
 eparseError_t deleteSimplePerceptron(SimplePerceptron_t sp) {
     deleteVector(sp->best_w);
     deleteVector(sp->w);
@@ -24,6 +26,9 @@ SimplePerceptron_t __newSimplePerceptron() {
     p->w = NULL;
     p->w_avg = NULL;
     p->w_beta = NULL;
+    p->sv_d = NULL;
+    p->instarr_d = NULL;
+    p->result_d  =NULL;
     p->c = 1;
 
     return p;
@@ -67,50 +72,38 @@ eparseError_t scoreSimplePerceptron(SimplePerceptron_t kp, Vector_t inst, bool a
             }
         }
     }
+    
+    return eparseSucess;
 }
 
 eparseError_t scoreBatchSimplePerceptron(SimplePerceptron_t kp, Matrix_t instarr, bool avg, Vector_t *result) {
     float zero = 0.f;
-
-
-    if (avg) {
-        if (kp->w_avg == NULL) {
-            newInitializedCPUVector(result, "result", instarr->ncol, matrixInitFixed, &zero, NULL)
+    
+    Vector_t weight = avg ? (kp->w_avg) : (kp->w);
+    
+    if ( weight != NULL){
+        
+        newInitializedCPUVector(result, "result on cpu",instarr->ncol, matrixInitNone, NULL, NULL)
+        long nleft = instarr->ncol;
+        long offset = 0;
+        
+        while (nleft > 0) {
+            EPARSE_CHECK_RETURN(mtrxcolcpy(&( kp->instarr_d ), memoryGPU, instarr, "instarr GPU batch", offset, MIN(nleft, BATCH_SIZE)))
+            
+            newInitializedGPUVector(&(kp->result_d), "result", MIN(nleft, BATCH_SIZE), matrixInitFixed, &zero, NULL)
+            
+            EPARSE_CHECK_RETURN(prodMatrixVector(kp->instarr_d, true, weight, kp->result_d))
+            
+            EPARSE_CHECK_RETURN(matrixDatacpyAnyToAny(*result, offset, kp->result_d, 0,  MIN(nleft, BATCH_SIZE) * sizeof(float)));
+            
+            offset +=  MIN(nleft, BATCH_SIZE);
+            nleft -= MIN(nleft, BATCH_SIZE);
         }
-        else {
-            Matrix_t instarr_d = NULL;
-	    Vector_t result_d = NULL;
-
-            EPARSE_CHECK_RETURN(cloneMatrix(&instarr_d, memoryGPU, instarr, "device matrix"))
-            newInitializedGPUVector(&result_d, "result", instarr->ncol, matrixInitFixed, &zero, NULL)
-
-            EPARSE_CHECK_RETURN(prodMatrixVector(instarr_d, true, kp->w_avg, result_d))
-            EPARSE_CHECK_RETURN(cloneMatrix(result, memoryCPU, result_d, "result on CPU"))
-
-            deleteMatrix(instarr_d);
-	    deleteVector(result_d);
-        }
-    } else {
-        if (kp->w == NULL) {
-
-            newInitializedCPUVector(result, "result", instarr->ncol, matrixInitFixed, &zero, NULL)
-
-        }
-        else {
-            Matrix_t instarr_d = NULL;
-	    Vector_t result_d = NULL;
-
-            EPARSE_CHECK_RETURN(cloneMatrix(&instarr_d, memoryGPU, instarr, "device matrix"))
-            newInitializedGPUVector(&result_d, "result", instarr->ncol, matrixInitFixed, &zero, NULL)
-
-            EPARSE_CHECK_RETURN(prodMatrixVector(instarr_d, true, kp->w, result_d))
-            EPARSE_CHECK_RETURN(cloneMatrix(result, memoryCPU, result_d, "result on CPU"))
-
-            deleteMatrix(instarr_d);
-	    deleteVector(result_d);
-        }
+        
+    }else {
+        newInitializedCPUVector(result, "result", instarr->ncol, matrixInitFixed, &zero, NULL)
     }
-
+    
     return eparseSucess;
 }
 
@@ -132,13 +125,10 @@ eparseError_t updateSimplePerceptron(SimplePerceptron_t kp, Vector_t sv, long sv
         cuda_saxpy(sv->n, change, sv->data, 1, kp->w->data, 1);
         cuda_saxpy(sv->n, change * kp->c, sv->data, 1, kp->w_beta->data, 1);
     } else {
-        Vector_t sv_d = NULL;
-        EPARSE_CHECK_RETURN(cloneVector(&sv_d, memoryGPU, sv, "device sv"));
+        EPARSE_CHECK_RETURN(cloneVector(&(kp->sv_d), memoryGPU, sv, "device sv"));
 
-        cuda_saxpy(sv->n, change, sv_d->data, 1, kp->w->data, 1);
-        cuda_saxpy(sv->n, change * kp->c, sv_d->data, 1, kp->w_beta->data, 1);
-
-        deleteVector(sv_d);
+        cuda_saxpy(sv->n, change, kp->sv_d->data, 1, kp->w->data, 1);
+        cuda_saxpy(sv->n, change * kp->c, kp->sv_d->data, 1, kp->w_beta->data, 1);
     }
 
     return eparseSucess;
@@ -155,9 +145,22 @@ eparseError_t loadSimplePerceptron(FILE *fp, void **kp) {
 }
 
 eparseError_t recomputeSimplePerceptronAvgWeight(SimplePerceptron_t p) {
-    return eparseColumnNumberMissmatch;
+    
+    EPARSE_CHECK_RETURN(cloneVector(&(p->w_avg), memoryGPU, p->w, "w-avg clone of w"))
+    
+    EPARSE_CHECK_RETURN(cuda_saxpy( p->w->n, -1./(p->c), p->w_beta->data,1,p->w_avg->data,1 ))
+    
+    return eparseSucess;
 }
 
 eparseError_t snapshotBestSimplePerceptron(SimplePerceptron_t sp) {
-    return eparseColumnNumberMissmatch;
+    debug("Best model snapshot started");
+
+    EPARSE_CHECK_RETURN(cloneMatrix(&(sp->best_w), memoryCPU, sp->w_avg, "Best w-avg"))
+
+    sp->best_numit = 0; //TODO: Fix it
+
+    debug("Best model snapshot completed");
+
+    return eparseSucess;
 }

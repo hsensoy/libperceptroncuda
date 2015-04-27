@@ -35,6 +35,14 @@ __global__ void _g_vsSin(long n, float *a, float *b) {
     }
 }
 
+__global__ void _g_vsCosSin(long n, const float* __restrict__ a, float* __restrict__ b) {
+    for (long i = blockIdx.x * blockDim.x + threadIdx.x;
+         i < n;
+         i += blockDim.x * gridDim.x) {
+        sincosf(a[i],&(b[i+n]),&(b[i]));
+    }
+}
+
 
 eparseError_t vsScale(long n,float *x,float scaler) {
     _g_vsScale <<< 4096, 256 >>> (n, scaler,x);
@@ -52,17 +60,21 @@ eparseError_t vsPowx(long n, float *a, float b) {
 }
 
 
-eparseError_t vsCosSinMatrix(long nrow, long ncol, float *x, float *y) {
+eparseError_t vsCosSinMatrix(long nrow, long ncol, const float* __restrict__ x, float* __restrict__ y) {
 
+    /**
+        todo: This loop can simply be removed and fully vectorized.
+    */
     for (int i = 0; i < nrow * ncol; i += nrow) {
-        _g_vsCos <<< 4096, 256 >>> (nrow, x + i, y + 2 * i);
-        _g_vsSin <<< 4096, 256 >>> (nrow, x + i, y + 2 * i + nrow);
+        //_g_vsCos <<< 4096, 256 >>> (nrow, x + i, y + 2 * i);
+        //_g_vsSin <<< 4096, 256 >>> (nrow, x + i, y + 2 * i + nrow);
+         _g_vsCosSin <<< 4096, 256 >>> (nrow, x + i, y + 2 * i);
     }
 
     return eparseSucess;
 }
 
-__global__ void _g_saxpy(long n, float change, float *a, float *b) {
+__global__ void _g_saxpy(long n, float change, const float* __restrict__ a, float* __restrict__ b) {
     for (long i = blockIdx.x * blockDim.x + threadIdx.x;
          i < n;
          i += blockDim.x * gridDim.x) {
@@ -72,7 +84,7 @@ __global__ void _g_saxpy(long n, float change, float *a, float *b) {
     }
 }
 
-eparseError_t cuda_saxpy(long n, float change, float *x, long x_idx, float *y, long y_idx){
+eparseError_t cuda_saxpy(long n, float change, const float* __restrict__ x, long x_idx, float* __restrict__ y, long y_idx){
 
     _g_saxpy<<< 4096, 256 >>> (n,change,x,y);
     
