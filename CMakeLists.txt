@@ -75,5 +75,5 @@ endforeach(t)
 
 #set (CMAKE_INSTALL_PREFIX /home/hsensoy/ai-lab)
 install(TARGETS ${PROJ_NAME} DESTINATION lib)
-install(FILES include/perceptron_common.h include/perceptron.h DESTINATION include/perceptron)
+install(FILES include/perceptron_common.h include/perceptron.h include/featuretransform.h DESTINATION include/perceptron)
 install(FILES include/epblas/eputil.h include/epblas/epblas.h DESTINATION include/perceptron/epblas)
