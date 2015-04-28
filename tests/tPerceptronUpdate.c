@@ -9,7 +9,7 @@
 
 
 void succesiveUpdatandScore() {
-    Perceptron_t pkp = newSimplePerceptron();
+    Perceptron_t pkp = newSimplePerceptron(NULL);
 
 
 

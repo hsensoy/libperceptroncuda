@@ -191,9 +191,9 @@ eparseError_t __transformBatchOnDevice(FeatureTransformer_t ft, Matrix_t in, Mat
                
             EPARSE_CHECK_RETURN(prodMatrixMatrix(rbf->samples,false,rbf->in_cache , rbf->partial_matrix))
                 
-            EPARSE_CHECK_RETURN(CosSinMatrix(rbf->partial_matrix, out))
+            EPARSE_CHECK_RETURN(CosSinMatrix(rbf->partial_matrix, *out))
 
-            EPARSE_CHECK_RETURN(vsScale(out->n ,out->data, rbf->scaler))
+            EPARSE_CHECK_RETURN(vsScale((*out)->n ,(*out)->data, rbf->scaler))
                 
             break;
         case KERNAPROX_NONE:
