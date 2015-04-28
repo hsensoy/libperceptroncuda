@@ -12,7 +12,7 @@ SET( PROJ_LIBRARIES "m" )
 SET( PROJ_INCLUDES  "include" "include/epblas" "/usr/local/include/shared" )
 
 SET( CMAKE_SHARED_LINKER_FLAGS " -O3 /usr/local/lib/shared/libshared.a" CACHE STRING "" FORCE )
-SET( CMAKE_C_FLAGS "-std=gnu99 -Wall -O3 -DNDEBUG  -g")
+SET( CMAKE_C_FLAGS "-std=gnu99 -Wall -O3 -DNDEBUG  -g -DFAST_COSSIN")
 
 
 SET (${PROJ_NAME}_VERSION_MAJOR 0)

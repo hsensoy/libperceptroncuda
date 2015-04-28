@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "epblas/epblas.h"
-#include "epblas/cudakernel.h"
+#include "epblas/epcudakernel.h"
+#include <curand.h>
 
 /*
  * CUnit Test Suite
@@ -44,7 +45,7 @@ void testFastCosSinTransform() {
 	
 	check(R_host->n == Rfast_host->n, "R-host %ld R-fast-host %ld",R_host->n, Rfast_host->n);
 	
-	for(long i = 0 ; i < R_host->n, i++){
+	for(long i = 0 ; i < R_host->n; i++){
 		check( (Rfast_host->data)[i] == (R_host->data)[i], "Fast result %f on index %d does not match with %f",(Rfast_host->data)[i], i, (R_host->data)[i] );
 	}
 	

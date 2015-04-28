@@ -49,12 +49,11 @@ __global__ void _g_vsCosSinFast(long nrow, long ncol, const float* __restrict__ 
 
 eparseError_t vsCosSinMatrixFast(long nrow, long ncol, const float* __restrict__ x, float* __restrict__ y) {
 
-    _g_vsCosSin <<< 4096, 256 >>> (nrow, ncol, x, y);
+    _g_vsCosSinFast <<< 4096, 256 >>> (nrow, ncol, x, y);
     
     return eparseSucess;
 }
 
-#ifndef FAST_COSSIN
 __global__ void _g_vsCosSin(long n, const float* __restrict__ a, float* __restrict__ b) {
     for (long i = blockIdx.x * blockDim.x + threadIdx.x;
          i < n;
@@ -74,7 +73,6 @@ eparseError_t vsCosSinMatrix(long nrow, long ncol, const float* __restrict__ x, 
 
     return eparseSucess;
 }
-#endif
 
 
 eparseError_t vsScale(long n,float *x,float scaler) {
@@ -92,18 +90,6 @@ eparseError_t vsPowx(long n, float *a, float b) {
     return eparseSucess;
 }
 
-
-eparseError_t vsCosSinMatrix(long nrow, long ncol, const float* __restrict__ x, float* __restrict__ y) {
-
-    /**
-        todo: This loop can simply be removed and fully vectorized.
-    */
-    for (int i = 0; i < nrow * ncol; i += nrow) {
-         _g_vsCosSin <<< 4096, 256 >>> (nrow, x + i, y + 2 * i);
-    }
-
-    return eparseSucess;
-}
 
 __global__ void _g_saxpy(long n, float change, const float* __restrict__ a, float* __restrict__ b) {
     for (long i = blockIdx.x * blockDim.x + threadIdx.x;
