@@ -47,45 +47,12 @@ SimplePerceptron_t __newSimplePerceptron(FeatureTransformer_t ft) {
 }
 
 eparseError_t scoreSimplePerceptron(SimplePerceptron_t kp, Vector_t inst, bool avg, float *s) {
-    check( kp->ft != NULL, "Use of feature transform for score is not implemented yet. Rather use scoreBatch");
+    Vector_t r = NULL;
+    EPARSE_CHECK_RETURN(scoreBatchSimplePerceptron(kp, inst, avg, &r))
     
-    if (avg) {
-        if (kp->w_avg == NULL)
-            *s = 0.f;
-        else {
-            if (inst->dev == memoryGPU) {
-                EPARSE_CHECK_RETURN(dot(kp->w_avg, inst, s))
-            }
-            else {
-                Vector_t inst_d = NULL;
-                EPARSE_CHECK_RETURN(cloneVector(&inst_d, memoryGPU, inst, "device instance"));
-
-                EPARSE_CHECK_RETURN(dot(kp->w_avg, inst_d, s))
-
-                deleteVector(inst_d);
-            }
-        }
-    } else {
-        if (kp->w == NULL)
-            *s = 0.f;
-        else {
-            if (inst->dev == memoryGPU) {
-                EPARSE_CHECK_RETURN(dot(kp->w, inst, s))
-            }
-            else {
-                Vector_t inst_d = NULL;
-                EPARSE_CHECK_RETURN(cloneVector(&inst_d, memoryGPU, inst, "device instance"));
-
-                EPARSE_CHECK_RETURN(dot(kp->w, inst_d, s))
-
-                deleteVector(inst_d);
-            }
-        }
-    }
+    *s = (r->data)[0];
     
     return eparseSucess;
-error:
-    return eparseNotImplementedYet;
 }
 
 eparseError_t scoreBatchSimplePerceptron(SimplePerceptron_t kp, Matrix_t instarr, bool avg, Vector_t *result) {
