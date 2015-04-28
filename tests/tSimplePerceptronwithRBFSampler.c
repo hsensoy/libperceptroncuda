@@ -6,7 +6,7 @@
 
 void creatndDrop() {
     log_info("Creating simple perceptron");
-    Perceptron_t pkp = newSimplePerceptron();
+    Perceptron_t pkp = newSimplePerceptron(NULL);
 
     log_info("Creating and RBF Sampler");
     FeatureTransformer_t ft = newRBFSampler(100000, 1.);

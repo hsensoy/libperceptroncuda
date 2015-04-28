@@ -41,10 +41,10 @@ Perceptron_t newPolynomialKernelPerceptron(int power, float bias){
     return p;
 }
 
-Perceptron_t newSimplePerceptron(){
+Perceptron_t newSimplePerceptron(FeatureTransformer_t ft){
     Perceptron_t p = newPerceptron(SIMPLE_PERCEPTRON);
 
-    p->pDeriveObj = (void *)__newSimplePerceptron();
+    p->pDeriveObj = (void *)__newSimplePerceptron(ft);
 
     return p;
 }

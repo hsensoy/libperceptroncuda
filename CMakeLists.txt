@@ -12,7 +12,7 @@ SET( PROJ_LIBRARIES "m" )
 SET( PROJ_INCLUDES  "include" "include/epblas" "/usr/local/include/shared" )
 
 SET( CMAKE_SHARED_LINKER_FLAGS " -O3 /usr/local/lib/shared/libshared.a" CACHE STRING "" FORCE )
-SET( CMAKE_C_FLAGS "-std=gnu99 -Wall -O3 -DNDEBUG  -g")
+SET( CMAKE_C_FLAGS "-std=gnu99 -Wall -O3 -DNDEBUG  -g -DFAST_COSSIN")
 
 
 SET (${PROJ_NAME}_VERSION_MAJOR 0)
@@ -62,7 +62,8 @@ SET ( PROJ_TESTS
      "tPerceptronUpdate"
      "tPerceptronUpdatewithRBFSampler"
      "tPerceptronBatchScorewithRBFSampler"
-     "tPerceptronBatchScorewithRBFSamplerToyProblem")
+     "tPerceptronBatchScorewithRBFSamplerToyProblem"
+    "tCosSinFast")
 
 foreach( t ${PROJ_TESTS} )
     add_executable( test_${PROJ_NAME}_${t} tests/${t}.c)
@@ -75,5 +76,5 @@ endforeach(t)
 
 #set (CMAKE_INSTALL_PREFIX /home/hsensoy/ai-lab)
 install(TARGETS ${PROJ_NAME} DESTINATION lib)
-install(FILES include/perceptron_common.h include/perceptron.h DESTINATION include/perceptron)
+install(FILES include/perceptron_common.h include/perceptron.h include/featuretransform.h DESTINATION include/perceptron)
 install(FILES include/epblas/eputil.h include/epblas/epblas.h DESTINATION include/perceptron/epblas)

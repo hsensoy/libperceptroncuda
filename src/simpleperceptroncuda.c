@@ -2,12 +2,13 @@
 #include "epcudakernel.h"
 
 
-#define BATCH_SIZE 8000 //For simple perceptron we have more space to be used at CUDA hardware
+#define BATCH_SIZE 1200 //For simple perceptron we have more space to be used at CUDA hardware
 
 eparseError_t deleteSimplePerceptron(SimplePerceptron_t sp) {
     deleteVector(sp->best_w);
     deleteVector(sp->w);
     deleteVector(sp->w_avg);
+    deleteFeatureTransformer(sp->ft);
 
     free(sp);
 
@@ -15,7 +16,7 @@ eparseError_t deleteSimplePerceptron(SimplePerceptron_t sp) {
 
 }
 
-SimplePerceptron_t __newSimplePerceptron() {
+SimplePerceptron_t __newSimplePerceptron(FeatureTransformer_t ft) {
     SimplePerceptron_t p = (SimplePerceptron_t) malloc(sizeof(struct SimplePerceptron_st));
 
     check_mem(p);
@@ -28,8 +29,15 @@ SimplePerceptron_t __newSimplePerceptron() {
     p->w_beta = NULL;
     p->sv_d = NULL;
     p->instarr_d = NULL;
+    p->instarr_pre_d = NULL;
+    
+    if (ft != NULL)
+        EPARSE_CHECK_RETURN(newInitializedGPUMatrix( &(p->instarr_d), "Transformed input on GPU",1, 1, matrixInitNone, NULL, NULL))
+    
+    
     p->result_d  =NULL;
     p->c = 1;
+    p->ft = ft;
 
     return p;
 
@@ -39,39 +47,10 @@ SimplePerceptron_t __newSimplePerceptron() {
 }
 
 eparseError_t scoreSimplePerceptron(SimplePerceptron_t kp, Vector_t inst, bool avg, float *s) {
-    if (avg) {
-        if (kp->w_avg == NULL)
-            *s = 0.f;
-        else {
-            if (inst->dev == memoryGPU) {
-                EPARSE_CHECK_RETURN(dot(kp->w_avg, inst, s))
-            }
-            else {
-                Vector_t inst_d = NULL;
-                EPARSE_CHECK_RETURN(cloneVector(&inst_d, memoryGPU, inst, "device instance"));
-
-                EPARSE_CHECK_RETURN(dot(kp->w_avg, inst_d, s))
-
-                deleteVector(inst_d);
-            }
-        }
-    } else {
-        if (kp->w == NULL)
-            *s = 0.f;
-        else {
-            if (inst->dev == memoryGPU) {
-                EPARSE_CHECK_RETURN(dot(kp->w, inst, s))
-            }
-            else {
-                Vector_t inst_d = NULL;
-                EPARSE_CHECK_RETURN(cloneVector(&inst_d, memoryGPU, inst, "device instance"));
-
-                EPARSE_CHECK_RETURN(dot(kp->w, inst_d, s))
-
-                deleteVector(inst_d);
-            }
-        }
-    }
+    Vector_t r = NULL;
+    EPARSE_CHECK_RETURN(scoreBatchSimplePerceptron(kp, inst, avg, &r))
+    
+    *s = (r->data)[0];
     
     return eparseSucess;
 }
@@ -88,7 +67,13 @@ eparseError_t scoreBatchSimplePerceptron(SimplePerceptron_t kp, Matrix_t instarr
         long offset = 0;
         
         while (nleft > 0) {
-            EPARSE_CHECK_RETURN(mtrxcolcpy(&( kp->instarr_d ), memoryGPU, instarr, "instarr GPU batch", offset, MIN(nleft, BATCH_SIZE)))
+                       
+            if (kp->ft != NULL){
+                EPARSE_CHECK_RETURN(mtrxcolcpy(&( kp->instarr_pre_d ), memoryGPU, instarr, "instarr GPU batch", offset, MIN(nleft, BATCH_SIZE)))
+                EPARSE_CHECK_RETURN( transformBatch(kp->ft, kp->instarr_pre_d, &(kp->instarr_d)))
+            }
+            else
+                EPARSE_CHECK_RETURN(mtrxcolcpy(&( kp->instarr_d ), memoryGPU, instarr, "instarr GPU batch", offset, MIN(nleft, BATCH_SIZE)))
             
             newInitializedGPUVector(&(kp->result_d), "result", MIN(nleft, BATCH_SIZE), matrixInitFixed, &zero, NULL)
             

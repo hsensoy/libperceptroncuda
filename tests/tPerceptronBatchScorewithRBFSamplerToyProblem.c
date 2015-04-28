@@ -3,7 +3,6 @@
 #include "perceptron.h"
 #include "featuretransform.h"
 #include "debug.h"
-#include <mkl.h>
 
 #define NSENTENCE 10000
 #define AVG_SENTENCE_LENGTH 20
@@ -11,7 +10,7 @@
 
 
 void succesiveUpdatandScore() {
-    Perceptron_t pkp = newSimplePerceptron();
+    Perceptron_t pkp = newSimplePerceptron(NULL);
 
 
 

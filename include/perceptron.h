@@ -5,6 +5,7 @@
 #include "epblas/eputil.h"
 #include "debug.h"
 #include "perceptron_common.h"
+#include "featuretransform.h"
 
 
 
@@ -17,7 +18,7 @@ struct Perceptron_st{
 typedef struct Perceptron_st* Perceptron_t;
 
 Perceptron_t newPolynomialKernelPerceptron(int power, float bias);
-Perceptron_t newSimplePerceptron();
+Perceptron_t newSimplePerceptron(FeatureTransformer_t ft);
 
 eparseError_t deletePerceptron(Perceptron_t p);
 
