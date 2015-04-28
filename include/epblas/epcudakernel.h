@@ -10,7 +10,12 @@ extern "C" {
 
 eparseError_t vsPowx(long n, float *a, float b);
 
-eparseError_t vsCosSinMatrix(long nrow, long ncol, const float* __restrict__ x, float* __restrict__ y) ;
+eparseError_t vsCosSinMatrixFast(long nrow, long ncol, const float* __restrict__ x, float* __restrict__ y);
+#ifdef FAST_COSSIN
+	#define vsCosSinMatrix vsCosSinMatrixFast
+#else
+	eparseError_t vsCosSinMatrix(long nrow, long ncol, const float* __restrict__ x, float* __restrict__ y) ;
+#endif
 
 eparseError_t vsScale(long n, float *x, float scaler);
 

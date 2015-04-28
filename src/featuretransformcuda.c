@@ -184,8 +184,10 @@ eparseError_t __transformBatchOnDevice(FeatureTransformer_t ft, Matrix_t in, Mat
             
             EPARSE_CHECK_RETURN(newInitializedMatrix(out, memoryGPU, "Transformed Matrix on GPU", 2 * rbf->nsample, in->ncol, matrixInitNone,NULL,NULL))
             
-            // todo: use clone instead of this.
-            EPARSE_CHECK_RETURN(mtrxcolcpy(&( rbf->in_cache ), memoryGPU, in, "in GPU batch", 0, in->ncol))
+            if (in->dev == memoryGPU)
+                rbf->in_cache = in->dev ;
+            else
+                EPARSE_CHECK_RETURN(mtrxcolcpy(&( rbf->in_cache ), memoryGPU, in, "in GPU batch", 0, in->ncol))
                 
             EPARSE_CHECK_RETURN(newInitializedMatrix(&(rbf->partial_matrix), memoryGPU, "partial matrix",rbf->nsample, in->ncol, matrixInitFixed, &zero, NULL))
                

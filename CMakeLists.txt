@@ -62,7 +62,8 @@ SET ( PROJ_TESTS
      "tPerceptronUpdate"
      "tPerceptronUpdatewithRBFSampler"
      "tPerceptronBatchScorewithRBFSampler"
-     "tPerceptronBatchScorewithRBFSamplerToyProblem")
+     "tPerceptronBatchScorewithRBFSamplerToyProblem"
+    "tCosSinFast")
 
 foreach( t ${PROJ_TESTS} )
     add_executable( test_${PROJ_NAME}_${t} tests/${t}.c)

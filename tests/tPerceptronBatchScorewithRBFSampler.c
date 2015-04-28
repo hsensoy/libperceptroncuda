@@ -36,6 +36,7 @@ void succesiveUpdatandScore() {
     CHECK_RETURN(newProgress(&ptested, "test sentences", NSENTENCE, 0.1))
 
     EPARSE_CHECK_RETURN(newInitializedCPUMatrix(&vBatch, "arc matrix", XFORMED_EMBEDDING_LENGTH, AVG_SENTENCE_LENGTH * AVG_SENTENCE_LENGTH, matrixInitNone, NULL,NULL))
+    EPARSE_CHECK_RETURN(newInitializedCPUMatrix(&vBatch_nl, "arc matrix(transformed)", 1,1, matrixInitNone, NULL,NULL))
 
 
     for (int j = 0; j < AVG_SENTENCE_LENGTH * AVG_SENTENCE_LENGTH; j++)
