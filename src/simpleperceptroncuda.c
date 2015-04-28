@@ -32,7 +32,7 @@ SimplePerceptron_t __newSimplePerceptron(FeatureTransformer_t ft) {
     p->instarr_pre_d = NULL;
     
     if (ft != NULL)
-        EPARSE_CHECK_RETURN(newInitializedGPUMatrix( p->instarr_d, "Transformed input on GPU",1, 1, matrixInitNone, NULL, NULL))
+        EPARSE_CHECK_RETURN(newInitializedGPUMatrix( &(p->instarr_d), "Transformed input on GPU",1, 1, matrixInitNone, NULL, NULL))
     
     
     p->result_d  =NULL;

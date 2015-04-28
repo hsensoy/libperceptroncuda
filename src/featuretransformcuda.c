@@ -221,10 +221,8 @@ eparseError_t transformBatch(FeatureTransformer_t ft, Matrix_t in, Matrix_t *out
     float zero = 0.f;
     
     debug("transformBatch is called");
-    
-    check(  (*out) != NULL, "transformBatch can grow out Matrix when neccessary. But you should initialize it before call to specify memory type: CPU/GPU");
-    
-    if ( (*out)->dev == memoryGPU ) {
+        
+    if ( (*out) != NULL && (*out)->dev == memoryGPU ) {
         return __transformBatchOnDevice(ft, in, out);
     }else{
         switch(ft->type){
