@@ -13,7 +13,7 @@ __global__ void _g_vsScale(long n, float b, float *a) {
     for (long i = blockIdx.x * blockDim.x + threadIdx.x;
          i < n;
          i += blockDim.x * gridDim.x) {
-        a[i] = a[i]/b;
+        a[i] = a[i] * b;
     }
 }
 
