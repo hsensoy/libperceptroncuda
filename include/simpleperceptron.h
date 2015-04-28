@@ -7,7 +7,8 @@
 #include "debug.h"
 #include "perceptron_common.h"
 
-SimplePerceptron_t __newSimplePerceptron();
+
+SimplePerceptron_t __newSimplePerceptron(FeatureTransformer_t ft);
 eparseError_t deleteSimplePerceptron(SimplePerceptron_t p);
 
 

@@ -8,6 +8,7 @@ eparseError_t deleteSimplePerceptron(SimplePerceptron_t sp) {
     deleteVector(sp->best_w);
     deleteVector(sp->w);
     deleteVector(sp->w_avg);
+    deleteFeatureTransformer(sp->ft);
 
     free(sp);
 
@@ -15,7 +16,7 @@ eparseError_t deleteSimplePerceptron(SimplePerceptron_t sp) {
 
 }
 
-SimplePerceptron_t __newSimplePerceptron() {
+SimplePerceptron_t __newSimplePerceptron(FeatureTransformer_t ft) {
     SimplePerceptron_t p = (SimplePerceptron_t) malloc(sizeof(struct SimplePerceptron_st));
 
     check_mem(p);
@@ -28,8 +29,15 @@ SimplePerceptron_t __newSimplePerceptron() {
     p->w_beta = NULL;
     p->sv_d = NULL;
     p->instarr_d = NULL;
+    p->instarr_pre_d = NULL;
+    
+    if (ft != NULL)
+        EPARSE_CHECK_RETURN(newInitializedGPUMatrix( p->instarr_d, "Transformed input on GPU",1, 1, matrixInitNone, NULL, NULL))
+    
+    
     p->result_d  =NULL;
     p->c = 1;
+    p->ft = ft;
 
     return p;
 
@@ -39,6 +47,8 @@ SimplePerceptron_t __newSimplePerceptron() {
 }
 
 eparseError_t scoreSimplePerceptron(SimplePerceptron_t kp, Vector_t inst, bool avg, float *s) {
+    check( kp->ft != NULL, "Use of feature transform for score is not implemented yet. Rather use scoreBatch");
+    
     if (avg) {
         if (kp->w_avg == NULL)
             *s = 0.f;
@@ -74,6 +84,8 @@ eparseError_t scoreSimplePerceptron(SimplePerceptron_t kp, Vector_t inst, bool a
     }
     
     return eparseSucess;
+error:
+    return eparseNotImplementedYet;
 }
 
 eparseError_t scoreBatchSimplePerceptron(SimplePerceptron_t kp, Matrix_t instarr, bool avg, Vector_t *result) {
@@ -88,7 +100,13 @@ eparseError_t scoreBatchSimplePerceptron(SimplePerceptron_t kp, Matrix_t instarr
         long offset = 0;
         
         while (nleft > 0) {
-            EPARSE_CHECK_RETURN(mtrxcolcpy(&( kp->instarr_d ), memoryGPU, instarr, "instarr GPU batch", offset, MIN(nleft, BATCH_SIZE)))
+                       
+            if (kp->ft != NULL){
+                EPARSE_CHECK_RETURN(mtrxcolcpy(&( kp->instarr_pre_d ), memoryGPU, instarr, "instarr GPU batch", offset, MIN(nleft, BATCH_SIZE)))
+                EPARSE_CHECK_RETURN( transformBatch(kp->ft, kp->instarr_pre_d, &(kp->instarr_d)))
+            }
+            else
+                EPARSE_CHECK_RETURN(mtrxcolcpy(&( kp->instarr_d ), memoryGPU, instarr, "instarr GPU batch", offset, MIN(nleft, BATCH_SIZE)))
             
             newInitializedGPUVector(&(kp->result_d), "result", MIN(nleft, BATCH_SIZE), matrixInitFixed, &zero, NULL)
             

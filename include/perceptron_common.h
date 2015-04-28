@@ -1,5 +1,7 @@
 #ifndef PERCEPTRON_COMMON_H
 #define  PERCEPTRON_COMMON_H
+
+#include "featuretransform.h"
 /**
 *
 * NONE: No budgeting at all
@@ -82,9 +84,12 @@ struct SimplePerceptron_st {
     Vector_t best_w;
     Vector_t w_beta;
     
+    FeatureTransformer_t ft;
+    
     // Intermediate objects to reduce malloc/free overhead (especially on CUDA)
     Vector_t sv_d;    
     Matrix_t instarr_d;
+    Matrix_t instarr_pre_d;
     Vector_t result_d;
     
 };

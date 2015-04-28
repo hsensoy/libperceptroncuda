@@ -164,13 +164,15 @@ eparseError_t transform(FeatureTransformer_t ft, Vector_t in, Vector_t *out){
 
 }
 
-eparseError_t transformBatch(FeatureTransformer_t ft, Matrix_t in, Matrix_t *out){
+eparseError_t __transformBatchOnDevice(FeatureTransformer_t ft, Matrix_t in, Matrix_t *out){
     RBFSampler_t rbf = NULL;
     float zero = 0.f;
     
-    debug("transformBatch is called");
+    debug("__transformBatchOnDevice is called");
     
-    check(   (*out) == NULL ||  (*out)->dev != memoryGPU, "out Matrix can only be allocated on CPU memory.");
+    check(   (*out) == NULL ||  (*out)->dev == memoryGPU, "__transformBatchOnDevice requires out Matrix to be on GPU memory");
+    
+    check( in->ncol <= TRANSFORM_BATCH_SIZE, "__transformBatchOnDevice is limited with %d instances at a time", TRANSFORM_BATCH_SIZE);
     
     
     switch(ft->type){
@@ -180,37 +182,18 @@ eparseError_t transformBatch(FeatureTransformer_t ft, Matrix_t in, Matrix_t *out
 
             EPARSE_CHECK_RETURN(__initRBFSampler(rbf, in->nrow)    )
             
-            /**
-                Size of out is (2*rbf->sample, in->col)
-                For example:
-                    For a sentence of length 100 words, there are 10.000 arcs
-                        In return there will be 400.000.000 elements with 1.6 GB CUDA memory requirement (this will be more than 2 GB with GROWTH parameter)
-            */
-            EPARSE_CHECK_RETURN(newInitializedMatrix(out, memoryCPU, "Transformed Matrix on CPU", 2 * rbf->nsample, in->ncol, matrixInitNone,NULL,NULL))
+            EPARSE_CHECK_RETURN(newInitializedMatrix(out, memoryGPU, "Transformed Matrix on GPU", 2 * rbf->nsample, in->ncol, matrixInitNone,NULL,NULL))
             
-            long nleft = in->ncol;
-            long offset = 0;
-            
-            while (nleft > 0) {
-                EPARSE_CHECK_RETURN(mtrxcolcpy(&( rbf->in_cache ), memoryGPU, in, "in GPU batch", offset, MIN(nleft, TRANSFORM_BATCH_SIZE)))
+            // todo: use clone instead of this.
+            EPARSE_CHECK_RETURN(mtrxcolcpy(&( rbf->in_cache ), memoryGPU, in, "in GPU batch", 0, in->ncol))
                 
-                EPARSE_CHECK_RETURN(newInitializedMatrix(&(rbf->partial_matrix), memoryGPU, "partial matrix",rbf->nsample, MIN(nleft, TRANSFORM_BATCH_SIZE), matrixInitFixed, &zero, NULL))
+            EPARSE_CHECK_RETURN(newInitializedMatrix(&(rbf->partial_matrix), memoryGPU, "partial matrix",rbf->nsample, in->ncol, matrixInitFixed, &zero, NULL))
+               
+            EPARSE_CHECK_RETURN(prodMatrixMatrix(rbf->samples,false,rbf->in_cache , rbf->partial_matrix))
                 
-                EPARSE_CHECK_RETURN(prodMatrixMatrix(rbf->samples,false,rbf->in_cache , rbf->partial_matrix))
-                
+            EPARSE_CHECK_RETURN(CosSinMatrix(rbf->partial_matrix, out))
 
-                EPARSE_CHECK_RETURN(newInitializedMatrix(&(rbf->out_dev),memoryGPU,"Transformed Matrix on Device",2 * rbf->nsample, MIN(nleft, TRANSFORM_BATCH_SIZE), matrixInitNone,NULL,NULL))
-
-                EPARSE_CHECK_RETURN(CosSinMatrix(rbf->partial_matrix, rbf->out_dev))
-
-                EPARSE_CHECK_RETURN(vsScale(rbf->out_dev->n ,rbf->out_dev->data, rbf->scaler))
-                
-                
-                EPARSE_CHECK_RETURN(matrixDatacpyAnyToAny(*out, offset * 2 * rbf->nsample, rbf->out_dev, 0,  2 * rbf->nsample * MIN(nleft, TRANSFORM_BATCH_SIZE) * sizeof(float)))
-                
-                offset +=  MIN(nleft, TRANSFORM_BATCH_SIZE);
-                nleft -= MIN(nleft, TRANSFORM_BATCH_SIZE);
-            }
+            EPARSE_CHECK_RETURN(vsScale(out->n ,out->data, rbf->scaler))
                 
             break;
         case KERNAPROX_NONE:
@@ -226,6 +209,71 @@ eparseError_t transformBatch(FeatureTransformer_t ft, Matrix_t in, Matrix_t *out
 
 
     return eparseSucess;
+    
+error:
+    return eparseCUDAError;
+
+}
+
+
+eparseError_t transformBatch(FeatureTransformer_t ft, Matrix_t in, Matrix_t *out){
+    RBFSampler_t rbf = NULL;
+    float zero = 0.f;
+    
+    debug("transformBatch is called");
+    
+    check(  (*out) != NULL, "transformBatch can grow out Matrix when neccessary. But you should initialize it before call to specify memory type: CPU/GPU");
+    
+    if ( (*out)->dev == memoryGPU ) {
+        return __transformBatchOnDevice(ft, in, out);
+    }else{
+        switch(ft->type){
+            case KERNAPROX_RBF_SAMPLER:
+
+                rbf = (RBFSampler_t)ft->pDeriveObj;
+
+                EPARSE_CHECK_RETURN(__initRBFSampler(rbf, in->nrow)    )
+                
+                EPARSE_CHECK_RETURN(newInitializedMatrix(out, memoryCPU, "Transformed Matrix on CPU", 2 * rbf->nsample, in->ncol, matrixInitNone,NULL,NULL))
+                
+                long nleft = in->ncol;
+                long offset = 0;
+                
+                while (nleft > 0) {
+                    EPARSE_CHECK_RETURN(mtrxcolcpy(&( rbf->in_cache ), memoryGPU, in, "in GPU batch", offset, MIN(nleft, TRANSFORM_BATCH_SIZE)))
+                    
+                    EPARSE_CHECK_RETURN(newInitializedMatrix(&(rbf->partial_matrix), memoryGPU, "partial matrix",rbf->nsample, MIN(nleft, TRANSFORM_BATCH_SIZE), matrixInitFixed, &zero, NULL))
+                    
+                    EPARSE_CHECK_RETURN(prodMatrixMatrix(rbf->samples,false,rbf->in_cache , rbf->partial_matrix))
+                    
+
+                    EPARSE_CHECK_RETURN(newInitializedMatrix(&(rbf->out_dev),memoryGPU,"Transformed Matrix on Device",2 * rbf->nsample, MIN(nleft, TRANSFORM_BATCH_SIZE), matrixInitNone,NULL,NULL))
+
+                    EPARSE_CHECK_RETURN(CosSinMatrix(rbf->partial_matrix, rbf->out_dev))
+
+                    EPARSE_CHECK_RETURN(vsScale(rbf->out_dev->n ,rbf->out_dev->data, rbf->scaler))
+                    
+                    
+                    EPARSE_CHECK_RETURN(matrixDatacpyAnyToAny(*out, offset * 2 * rbf->nsample, rbf->out_dev, 0,  2 * rbf->nsample * MIN(nleft, TRANSFORM_BATCH_SIZE) * sizeof(float)))
+                    
+                    offset +=  MIN(nleft, TRANSFORM_BATCH_SIZE);
+                    nleft -= MIN(nleft, TRANSFORM_BATCH_SIZE);
+                }
+                    
+                break;
+            case KERNAPROX_NONE:
+
+                cloneMatrix(out, memoryCPU,in, "transformed input");
+
+                break;
+
+            default:
+                return eparseNotImplementedYet;
+
+        }
+        
+        return eparseSucess;
+    }
     
 error:
     return eparseCUDAError;
