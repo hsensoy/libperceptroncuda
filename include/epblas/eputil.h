@@ -52,5 +52,5 @@ const char* eparseGetErrorString(eparseError_t status);
 					 eparseGetErrorString(stat), stat,__LINE__, __FILE__);		\
 			exit(1);															\
 		} }
-		
+
 #endif /* EPARSEUTIL_H_ */
