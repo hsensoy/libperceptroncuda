@@ -4,12 +4,12 @@
 
 static cublasHandle_t handle = NULL;
 
-#define VERSION "CUDA Enabled Embedding Parser BLAS" "0.0.7.1"
+#define VERSION "CUDA Enabled Embedding Parser BLAS " "0.0.7.1"
 
 #ifdef NDEBUG
-#define EPBLAS_PROMPT "\n\Loading:" "\n" "epblas " VERSION " - " "Production" "\n\n"
+#define EPBLAS_PROMPT "\nLoading:" "\n" "epblas " VERSION " - " "Production" "\n\n"
 #else
-    #define EPBLAS_PROMPT "\n\Loading:" "\n" "epblas " VERSION " - " "Debug" "\n\n"
+    #define EPBLAS_PROMPT "\nLoading:" "\n" "epblas " VERSION " - " "Debug" "\n\n"
 #endif
 
 #define GPU_MEMORY_GROWTH_RATE 1.2
@@ -18,7 +18,7 @@ static cublasHandle_t handle = NULL;
 
 void init() {
     if (handle == NULL) {
-        log_info("%s", EPBLAS_PROMPT);
+	log_info("%s", EPBLAS_PROMPT);
         CUDABLAS_CHECK_RETURN(cublasCreate(&handle))
     }
 }
