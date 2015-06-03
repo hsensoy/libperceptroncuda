@@ -426,7 +426,7 @@ bool vequal(const Vector_t v1, const Vector_t v2) {
     check(v1->n == v2->n, "Number of elements v1(%ld) and v2(%ld) do not match", v1->n, v2->n);
 
 
-    Vector_t v1_onCPU, v2_onCPU;
+    Vector_t v1_onCPU=NULL, v2_onCPU=NULL;
     if (v1->dev == memoryGPU) {
 
         EPARSE_CHECK_RETURN(cloneVector(&v1_onCPU, memoryCPU, v1, "Clone v1"))
@@ -442,7 +442,7 @@ bool vequal(const Vector_t v1, const Vector_t v2) {
 
 
     } else {
-        v1_onCPU = v1;
+        v2_onCPU = v2;
     }
 
 
