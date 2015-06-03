@@ -4,7 +4,7 @@
 
 static cublasHandle_t handle = NULL;
 
-#define VERSION "CUDA Enabled Embedding Parser BLAS" "0.0.7"
+#define VERSION "CUDA Enabled Embedding Parser BLAS" "0.0.7.1"
 
 #ifdef NDEBUG
 #define EPBLAS_PROMPT "\n\Loading:" "\n" "epblas " VERSION " - " "Production" "\n\n"
