@@ -4,13 +4,23 @@
 
 static cublasHandle_t handle = NULL;
 
-#define version "CUDA Enabled Embedding Parser BLAS"
+#define VERSION "CUDA Enabled Embedding Parser BLAS" "0.0.7"
+
+#ifdef NDEBUG
+#define EPBLAS_PROMPT "\n\Loading:" "\n" "epblas " VERSION " - " "Production" "\n\n"
+#else
+    #define EPBLAS_PROMPT "\n\Loading:" "\n" "epblas " VERSION " - " "Debug" "\n\n"
+#endif
 
 #define GPU_MEMORY_GROWTH_RATE 1.2
 #define CPU_MEMORY_GROWTH_RATE 1.5
 
+
 void init() {
-    if (handle == NULL) CUDABLAS_CHECK_RETURN(cublasCreate(&handle))
+    if (handle == NULL) {
+        log_info("%s", EPBLAS_PROMPT);
+        CUDABLAS_CHECK_RETURN(cublasCreate(&handle))
+    }
 }
 
 eparseError_t memcpyAnyToAny(float *dest, long dest_offset, memoryAllocationDevice_t dest_dev,
@@ -426,7 +436,7 @@ bool vequal(const Vector_t v1, const Vector_t v2) {
     check(v1->n == v2->n, "Number of elements v1(%ld) and v2(%ld) do not match", v1->n, v2->n);
 
 
-    Vector_t v1_onCPU=NULL, v2_onCPU=NULL;
+    Vector_t v1_onCPU = NULL, v2_onCPU = NULL;
     if (v1->dev == memoryGPU) {
 
         EPARSE_CHECK_RETURN(cloneVector(&v1_onCPU, memoryCPU, v1, "Clone v1"))
